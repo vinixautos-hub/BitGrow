@@ -397,13 +397,7 @@ function Divider() {
   );
 }
 
-function SandboxNotice() {
-  return (
-    <div style={{background:"#1a1200",border:"1px solid #fbbf2444",borderRadius:10,padding:"11px 14px",fontSize:12,color:"#d97706",lineHeight:1.7}}>
-      <strong>⚠ Preview notice:</strong> Supabase requests are blocked inside Claude's sandbox. <strong>Download this file and host it</strong> (Vercel, Netlify, localhost, etc.) for login/signup to work. All code is fully functional when deployed.
-    </div>
-  );
-}
+
 
 function LoginPage({ navigate, onLogin }) {
   const [form,setForm]=useState({email:"",password:""});
@@ -423,7 +417,6 @@ function LoginPage({ navigate, onLogin }) {
 
   return (
     <AuthCard title="Welcome Back" subtitle="Sign in to your BitGrow account">
-      <SandboxNotice/>
       <ErrBox msg={err}/>
       <GoogleBtn label="Continue with Google"/>
       <Divider/>
@@ -511,7 +504,6 @@ function RegisterPage({ navigate, onLogin }) {
           <h2 style={{fontWeight:800,fontSize:26,marginBottom:6}}>Create Account</h2>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:18}}>
-          <SandboxNotice/>
           <ErrBox msg={err}/>
           <GoogleBtn label="Sign up with Google"/>
           <Divider/>
