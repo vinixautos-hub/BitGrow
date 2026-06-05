@@ -1295,8 +1295,12 @@ export default function App() {
       if (stored) {
         try {
           const s = JSON.parse(stored);
-          const exp = s.expires_at || s.expires_in;
-          if (exp && Date.now()/1000 > exp) { localStorage.removeItem("bg_session"); setAuthLoading(false); return; }
+          // expires_at is Unix seconds — only logout if truly expired
+          if (s.expires_at && s.expires_at < Date.now()/1000) {
+            localStorage.removeItem("bg_session");
+            setAuthLoading(false);
+            return;
+          }
           _session = s;
           setSession(s);
           const uid = s.user?.id || s.user_id;
@@ -1309,6 +1313,9 @@ export default function App() {
   },[fetchProfile]);
 
   const handleLogin=useCallback((s)=>{
+    if (!s.expires_at && s.expires_in) {
+      s.expires_at = Math.floor(Date.now()/1000) + Number(s.expires_in);
+    }
     _session=s;
     setSession(s);
     localStorage.setItem("bg_session",JSON.stringify(s));
