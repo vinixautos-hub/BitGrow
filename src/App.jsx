@@ -16,7 +16,6 @@ const TESTIMONIALS = [
   { name: "Fatima A.",country: "🇦🇪 UAE",             avatar: "F", text: "Professional platform with a serious team behind it. The blockchain verification step gave me confidence that my funds were being handled properly.", plan: "VIP Plan", joined: "February 2024" },
 ];
 
-const QR_IMAGE = "data:image/png;base64,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";
 
 const BIP_WORDS = ["abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act","action","actor","actress","actual","adapt","add","addict","address","adjust","admit","adult","advance","advice","aerobic","afford","afraid","again","agent","agree","ahead","aim","air","airport","aisle","alarm","album","alcohol","alert","alien","alley","allow","almost","alone","alpha","already","also","alter","always","amateur","amazing","among","amount","amused","analyst","anchor","ancient","anger","angle","angry","animal","ankle","announce","annual","another","answer","antenna","antique","anxiety","april","arch","arctic","area","arena","argue","arm","armed","armor","army","around","arrange","arrest","arrive","arrow","art","article","artist","artwork","ask","aspect","assault","asset","assist","assume","asthma","athlete","atom","attack","attend","attitude","attract","auction","audit","august","aunt","author","auto","autumn","average","avocado","aware","awesome","awful","awkward","axis","baby","balance","bamboo","banana","banner","barely","bargain","barrel","base","basic","basket","battle","beach","beauty","because","become","beef","before","begin","behave","behind","believe","below","belt","bench","benefit","best","betray","better","between","beyond","bicycle","bid","bike","bind","biology","bird","birth","bitter","black","blade","blame","blanket","blast","bleak","bless","blind","blood","blossom","blouse","blue","blur","blush","board","boat","body","boil","bomb","bone","book","boost","border","boring","borrow","bounce","brain","brand","brave","bread","breeze","brick","bridge","brief","bright","bring","brisk","broken","bronze","broom","brother","brown","brush","bubble","buddy","budget","buffalo","build","bulb","bulk","bullet","bundle","bunker","burden","burger","burst","bus","business","busy","butter","buyer","buzz"];
 
@@ -158,18 +157,24 @@ function daysUntilWithdraw(inv) {
 }
 
 // ─── Phone validation ─────────────────────────────────────────────────────────
+// Strips ALL formatting chars (spaces, dashes, parens, dots) then validates:
+// 1. Total digits must be 9-15
+// 2. Number must start with country dial code
+// 3. At least 6 subscriber digits after removing country code
 function validatePhone(phone, country) {
+  if (!phone) return false;
   const dialCode = COUNTRY_DATA[country]?.code || "";
-  if (!phone || phone.trim().length < 7) return false;
-  // Must start with the dial code or have enough digits
-  const stripped = phone.replace(/[\s\-\(\)]/g, "");
-  if (dialCode && !stripped.startsWith(dialCode.replace("+", ""))) {
-    // Also allow if it starts with + and the code
-    if (!stripped.startsWith(dialCode)) return false;
-  }
-  // Must have 7-15 digits after stripping non-digits
   const digitsOnly = phone.replace(/\D/g, "");
-  return digitsOnly.length >= 7 && digitsOnly.length <= 15;
+  if (digitsOnly.length < 9 || digitsOnly.length > 15) return false;
+  if (!dialCode) return true;
+  const codeDigits = dialCode.replace("+", "");
+  // Normalize: strip leading + then check starts with country code digits
+  const withoutPlus = phone.trim().startsWith("+")
+    ? phone.trim().slice(1).replace(/\D/g, "")
+    : phone.replace(/[^0-9]/g, "");
+  if (!withoutPlus.startsWith(codeDigits)) return false;
+  const subscriberDigits = withoutPlus.slice(codeDigits.length);
+  return subscriberDigits.length >= 6;
 }
 
 // ─── ROBUST COPY ─────────────────────────────────────────────────────────────
@@ -434,6 +439,139 @@ function NotifBell({ count, msgs, currentUser, updateMsgs, setNotifCount, notifP
   );
 }
 
+// ─── DELETE ACCOUNT MODAL ────────────────────────────────────────────────────
+function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }) {
+  const [step, setStep] = useState(1); // 1=warning, 2=confirm password
+  const [password, setPassword] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const isGoogle = currentUser.authMethod === "google";
+
+  const handleConfirm = () => {
+    setErr("");
+    if (!isGoogle) {
+      if (!password) return setErr("Please enter your password to confirm.");
+      if (password !== currentUser.password) return setErr("Incorrect password. Account not deleted.");
+    }
+    setLoading(true);
+    setTimeout(() => {
+      // Remove user and all their data
+      const remaining = users.filter(u => u.id !== currentUser.id);
+      updateUsers(remaining);
+      // Clear session
+      localStorage.removeItem("bg_session");
+      localStorage.removeItem("bg_page");
+      // Remove their chats and withdrawals
+      try {
+        const chats = JSON.parse(localStorage.getItem("bg_chats") || "[]");
+        localStorage.setItem("bg_chats", JSON.stringify(chats.filter(m => m.userId !== currentUser.id)));
+        const ws = JSON.parse(localStorage.getItem("bg_withdraws") || "[]");
+        localStorage.setItem("bg_withdraws", JSON.stringify(ws.filter(w => w.userId !== currentUser.id)));
+      } catch(e) {}
+      setLoading(false);
+      logout();
+    }, 1500);
+  };
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <div onClick={e => e.stopPropagation()} className="fadein" style={{ background: "#0f1117", border: "2px solid #ef444444", borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 32px 80px rgba(239,68,68,0.2)" }}>
+
+        {/* Header */}
+        <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid #1e2030", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, background: "#ef444418", border: "1px solid #ef444444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🗑️</div>
+            <div>
+              <h2 style={{ fontWeight: 800, fontSize: 17, color: "#ef4444" }}>Delete Account</h2>
+              <p style={{ color: "#4b5563", fontSize: 11, marginTop: 1 }}>This action is permanent and cannot be undone</p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: "#111218", border: "1px solid #1e2030", color: "#9ca3af", borderRadius: 8, width: 32, height: 32, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+
+        <div style={{ padding: "24px 28px 28px" }}>
+          {step === 1 && (
+            <div>
+              {/* Warning box */}
+              <div style={{ background: "#ef444410", border: "1px solid #ef444430", borderRadius: 12, padding: "16px 18px", marginBottom: 20 }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#ef4444", marginBottom: 10 }}>⚠️ Before you delete, understand:</div>
+                {[
+                  "Your entire account and profile will be permanently erased",
+                  "All active investments and balance history will be deleted",
+                  "Any pending withdrawals will be cancelled immediately",
+                  "Your referral code and bonuses will be lost forever",
+                  "You cannot recover your account after deletion",
+                ].map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 7, fontSize: 13, color: "#9ca3af", lineHeight: 1.5 }}>
+                    <span style={{ color: "#ef4444", flexShrink: 0, marginTop: 1 }}>✕</span>{item}
+                  </div>
+                ))}
+              </div>
+
+              {/* Account summary */}
+              <div style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#fbbf24,#f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#07080f" }}>{currentUser.name?.[0]?.toUpperCase()}</div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 13 }}>{currentUser.name}</div>
+                    <div style={{ color: "#4b5563", fontSize: 11 }}>{currentUser.email}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={onClose} style={{ flex: 1, background: "#111218", border: "1px solid #1e2030", color: "#e8eaf0", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+                <button onClick={() => setStep(2)} style={{ flex: 1, background: "#ef444418", border: "1px solid #ef444455", color: "#ef4444", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Yes, I understand →</button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <p style={{ color: "#9ca3af", fontSize: 13, lineHeight: 1.7, margin: 0 }}>
+                To permanently delete your account, {isGoogle ? "click the button below to confirm." : "please enter your password below to confirm."}
+              </p>
+
+              {err && (
+                <div style={{ background: "#ef444414", border: "1px solid #ef444433", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#ef4444", display: "flex", gap: 8 }}>
+                  <span>⚠</span><span>{err}</span>
+                </div>
+              )}
+
+              {!isGoogle && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Confirm your password</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Enter your current password"
+                    autoFocus
+                    style={{ background: "#080910", border: "1px solid #ef444444", borderRadius: 10, padding: "12px 14px", color: "#e8eaf0", fontSize: 15 }}
+                  />
+                </div>
+              )}
+
+              <div style={{ background: "#ef444410", border: "1px solid #ef444430", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "#9ca3af", lineHeight: 1.6 }}>
+                🔴 <strong style={{ color: "#ef4444" }}>This is your final chance.</strong> Clicking delete below will immediately and permanently erase your account. This cannot be reversed.
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { setStep(1); setErr(""); setPassword(""); }} style={{ flex: 1, background: "#111218", border: "1px solid #1e2030", color: "#e8eaf0", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
+                <button onClick={handleConfirm} disabled={loading} style={{ flex: 1, background: loading ? "#7f1d1d" : "linear-gradient(135deg,#ef4444,#dc2626)", border: "none", color: "#fff", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                  {loading && <div style={{ width: 16, height: 16, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />}
+                  {loading ? "Deleting..." : "🗑️ Delete My Account"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── SECURITY MODAL ───────────────────────────────────────────────────────────
 function SecurityModal({ currentUser, users, updateUsers, onClose }) {
   const [tab, setTab] = useState("password");
@@ -512,6 +650,7 @@ function Nav({ page, navigate, goBack, pageHistory, currentUser, logout, isAdmin
   const showBack = pageHistory.length > 0 && page !== "home";
   const [dropOpen, setDropOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const dropRef = useRef(null);
 
   useEffect(() => {
@@ -525,6 +664,7 @@ function Nav({ page, navigate, goBack, pageHistory, currentUser, logout, isAdmin
   return (
     <>
       {securityOpen && <SecurityModal currentUser={currentUser} users={users} updateUsers={updateUsers} onClose={() => setSecurityOpen(false)} />}
+      {deleteOpen && <DeleteAccountModal currentUser={currentUser} users={users} updateUsers={updateUsers} logout={logout} onClose={() => setDeleteOpen(false)} />}
       <nav style={{ position: "sticky", top: 0, zIndex: 200, background: "rgba(7,8,15,0.97)", backdropFilter: "blur(20px)", borderBottom: "1px solid #1e2030", padding: "0 20px", height: 64, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {showBack && <button onClick={goBack} className="hov" style={{ background: "#111218", border: "1px solid #1e2030", color: "#9ca3af", borderRadius: 8, padding: "6px 10px", display: "flex", alignItems: "center", gap: 4, fontSize: 13, marginRight: 4 }}><BackIcon /> Back</button>}
@@ -603,7 +743,11 @@ function Nav({ page, navigate, goBack, pageHistory, currentUser, logout, isAdmin
                       <NavCopyBtn code={currentUser.referralCode} />
                     </div>
                     <div style={{ borderTop: "1px solid #1e2030", margin: "4px 0 0" }}>
-                      <div onClick={() => { logout(); setDropOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 18px", cursor: "pointer", borderRadius: "0 0 16px 16px" }} onMouseEnter={e => e.currentTarget.style.background = "#1a0808"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <div onClick={() => { setDropOpen(false); setDeleteOpen(true); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 18px", cursor: "pointer" }} onMouseEnter={e => e.currentTarget.style.background = "#1a0808"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                        <span style={{ fontSize: 16, width: 26, textAlign: "center" }}>🗑️</span>
+                        <div><div style={{ fontWeight: 700, fontSize: 13, color: "#ef4444" }}>Delete Account</div><div style={{ fontSize: 11, color: "#4b5563" }}>Permanently remove your data</div></div>
+                      </div>
+                      <div onClick={() => { logout(); setDropOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 18px", cursor: "pointer", borderRadius: "0 0 16px 16px", borderTop: "1px solid #1e203044" }} onMouseEnter={e => e.currentTarget.style.background = "#1a0808"} onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                         <span style={{ fontSize: 16, width: 26, textAlign: "center" }}>🚪</span>
                         <div><div style={{ fontWeight: 700, fontSize: 13, color: "#ef4444" }}>Sign Out</div><div style={{ fontSize: 11, color: "#4b5563" }}>End your session securely</div></div>
                       </div>
@@ -1045,11 +1189,12 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             )}
           </div>
 
-          {/* ── FIX 4: State dropdown from country ── */}
+          {/* ── State dropdown from country ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>State / Province</label>
             {stateOptions.length > 0 ? (
-              <select value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value, city: "" }))} style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: form.state ? "#e8eaf0" : "#6b7280", fontSize: 14, appearance: "none" }}>
+              <select value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value, city: "" }))}
+                style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: form.state ? "#e8eaf0" : "#6b7280", fontSize: 14, appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", minHeight: 46 }}>
                 <option value="">Select state / province</option>
                 {stateOptions.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -1058,11 +1203,12 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             )}
           </div>
 
-          {/* ── FIX 4: City dropdown from state ── */}
+          {/* ── City dropdown from state ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>City / LGA</label>
             {cityOptions.length > 0 ? (
-              <select value={form.city} onChange={f("city")} style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: form.city ? "#e8eaf0" : "#6b7280", fontSize: 14, appearance: "none" }}>
+              <select value={form.city} onChange={f("city")}
+                style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: form.city ? "#e8eaf0" : "#6b7280", fontSize: 14, appearance: "none", backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: "no-repeat", backgroundPosition: "right 14px center", minHeight: 46 }}>
                 <option value="">Select city / LGA</option>
                 {cityOptions.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
@@ -1347,36 +1493,7 @@ function OverviewTab({ user, totalBalance, totalInvested, totalProfit, activeInv
   );
 }
 
-function QRZoom() {
-  const [open, setOpen] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const minZoom = 0.5, maxZoom = 3, step = 0.25;
-  return (
-    <>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
-        <div onClick={() => { setOpen(true); setZoom(1); }} style={{ background: "#fff", borderRadius: 12, padding: 8, cursor: "zoom-in", boxShadow: "0 0 0 2px #fbbf2444" }}>
-          <img src={QR_IMAGE} width={130} height={130} alt="Wallet QR" style={{ display: "block", borderRadius: 6 }} />
-        </div>
-        <span style={{ color: "#6b7280", fontSize: 11 }}>🔍 Tap to zoom</span>
-      </div>
-      {open && (
-        <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 600, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
-            <div style={{ background: "#fff", borderRadius: 16, padding: 12, width: 260, height: 260, overflow: "hidden", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <img src={QR_IMAGE} alt="Wallet QR" style={{ width: 236 * zoom, height: 236 * zoom, borderRadius: 8, transition: "width .2s, height .2s", maxWidth: "none" }} />
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, background: "#0f1117", border: "1px solid #1e2030", borderRadius: 100, padding: "8px 16px" }}>
-              <button onClick={() => setZoom(z => Math.max(minZoom, +(z - step).toFixed(2)))} style={{ background: "#fbbf2418", border: "1px solid #fbbf2455", color: "#fbbf24", borderRadius: 8, width: 34, height: 34, fontSize: 18, fontWeight: 700, cursor: "pointer" }}>−</button>
-              <span style={{ color: "#e8eaf0", fontSize: 13, fontWeight: 700, minWidth: 44, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
-              <button onClick={() => setZoom(z => Math.min(maxZoom, +(z + step).toFixed(2)))} style={{ background: "#fbbf2418", border: "1px solid #fbbf2455", color: "#fbbf24", borderRadius: 8, width: 34, height: 34, fontSize: 18, fontWeight: 700, cursor: "pointer" }}>+</button>
-            </div>
-            <button onClick={() => setOpen(false)} style={{ background: "#111218", border: "1px solid #1e2030", color: "#9ca3af", borderRadius: 8, padding: "8px 24px", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>✕ Close</button>
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
+
 
 function InvestTab({ user, users, updateUsers }) {
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -1428,15 +1545,14 @@ function InvestTab({ user, users, updateUsers }) {
       <div style={{ marginBottom: 24 }}>
         <StepHeader n="2" title="Send Deposit to Wallet" />
         <div className="card" style={{ padding: 24, border: "1px solid #fbbf2422" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
-            <div style={{ flex: 1, minWidth: 200 }}>
+          <div>
+            <div>
               <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fbbf24", fontWeight: 700, marginBottom: 10, fontSize: 13 }}><BtcIcon /> BSC (BEP20) Network Only</div>
               <div style={{ background: "#080910", borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11, color: "#e8eaf0", wordBreak: "break-all", lineHeight: 1.9, marginBottom: 12, border: "1px solid #1e2030" }}>{BITCOIN_ADDRESS}</div>
               <button onClick={() => copyAddr(BITCOIN_ADDRESS)} style={{ width: "100%", background: addrCopied ? "#10b98118" : "#fbbf2418", color: addrCopied ? "#10b981" : "#fbbf24", border: `1px solid ${addrCopied ? "#10b98155" : "#fbbf2455"}`, padding: "9px", borderRadius: 8, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <CopyIcon /> {addrCopied ? "✓ Copied!" : "Copy Address"}
               </button>
             </div>
-            <QRZoom />
           </div>
         </div>
       </div>
