@@ -268,18 +268,18 @@ export default function App() {
 
   // Session stored in localStorage (browser-local, not synced — just remembers WHO is logged in)
   const [currentUser, setCurrentUserRaw] = useState(()=>{
-    try { const s=localStorage.getItem("bg_session"); return s?JSON.parse(s):null; } catch{return null;}
+    try { const s=sessionStorage.getItem("bg_session"); return s?JSON.parse(s):null; } catch{return null;}
   });
   const [page, setPageRaw] = useState(()=>{
     try {
-      const session = localStorage.getItem("bg_session");
+      const session = sessionStorage.getItem("bg_session");
       if (!session) return "home";
-      const pg = localStorage.getItem("bg_page");
+      const pg = sessionStorage.getItem("bg_page");
       return pg || "dashboard";
     } catch { return "home"; }
   });
 
-  const setPage = p => { setPageRaw(p); localStorage.setItem("bg_page", p); };
+  const setPage = p => { setPageRaw(p); sessionStorage.setItem("bg_page", p); };
 
   // ── Load ALL data from RTDB on mount, migrate localStorage if needed ──
   useEffect(() => {
@@ -319,10 +319,10 @@ export default function App() {
         setWithdraws(w);
 
         // 3. Refresh current session user from RTDB
-        const session = (() => { try { return JSON.parse(localStorage.getItem("bg_session") || "null"); } catch { return null; } })();
+        const session = (() => { try { return JSON.parse(sessionStorage.getItem("bg_session") || "null"); } catch { return null; } })();
         if (session) {
           const fresh = u.find(x => x.id === session.id);
-          if (fresh) { setCurrentUserRaw(fresh); localStorage.setItem("bg_session", JSON.stringify(fresh)); }
+          if (fresh) { setCurrentUserRaw(fresh); sessionStorage.setItem("bg_session", JSON.stringify(fresh)); }
         }
       } catch(e) {
         console.error("Load error", e);
@@ -338,7 +338,7 @@ export default function App() {
       if(found){
         const { _docId, ...fresh } = found;
         setCurrentUserRaw(fresh);
-        localStorage.setItem("bg_session", JSON.stringify(fresh));
+        sessionStorage.setItem("bg_session", JSON.stringify(fresh));
       }
     }
   },[users]);
@@ -369,7 +369,7 @@ export default function App() {
       if (found) {
         const { _docId, ...fresh } = found;
         setCurrentUserRaw(fresh);
-        localStorage.setItem("bg_session", JSON.stringify(fresh));
+        sessionStorage.setItem("bg_session", JSON.stringify(fresh));
       }
     }
   };
@@ -399,12 +399,12 @@ export default function App() {
       // Strip Firestore meta before storing in session
       const { _docId, ...cleanUser } = user;
       setCurrentUserRaw(cleanUser);
-      localStorage.setItem("bg_session", JSON.stringify(cleanUser));
-      localStorage.setItem("bg_page", "dashboard");
+      sessionStorage.setItem("bg_session", JSON.stringify(cleanUser));
+      sessionStorage.setItem("bg_page", "dashboard");
     } else {
       setCurrentUserRaw(null);
-      localStorage.removeItem("bg_session");
-      localStorage.removeItem("bg_page");
+      sessionStorage.removeItem("bg_session");
+      sessionStorage.removeItem("bg_page");
     }
   };
 
@@ -628,8 +628,8 @@ function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }
         await fsDeleteDoc("bg_withdraws", String(w.id));
       }
     } catch(e) { console.error("Delete error", e); }
-    localStorage.removeItem("bg_session");
-    localStorage.removeItem("bg_page");
+    sessionStorage.removeItem("bg_session");
+    sessionStorage.removeItem("bg_page");
     setLoading(false);
     logout();
   };
