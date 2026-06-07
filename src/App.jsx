@@ -127,54 +127,45 @@ Object.entries(COUNTRY_DATA).forEach(([country, data]) => {
 const COUNTRIES = Object.keys(COUNTRY_DATA).sort();
 const CURRENCIES = [...new Set(Object.values(COUNTRY_DATA).map(d => d.currency))].sort();
 
-// ─── FIREBASE FIRESTORE (official SDK via CDN) ───────────────────────────────
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
-  authDomain: "bitgrow-e379d.firebaseapp.com",
-  projectId: "bitgrow-e379d",
-  storageBucket: "bitgrow-e379d.firebasestorage.app",
-  messagingSenderId: "968123074537",
-  appId: "1:968123074537:web:f4db6242f8964715586d78",
-};
+// ─── FIREBASE REALTIME DATABASE (simple REST) ────────────────────────────────
+// No SDK needed — plain fetch to a JSON endpoint. Works across all devices.
+const RTDB = "https://bitgrow-e379d-default-rtdb.firebaseio.com";
 
-// Lazy-load Firebase SDK and return {db}
-let _db = null;
-async function getDb() {
-  if (_db) return _db;
-  const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-  const { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, limit } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
-  const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
-  _db = { db: getFirestore(app), collection, getDocs, doc, setDoc, deleteDoc, query, limit };
-  return _db;
-}
+const _cache = {};
 
-// Read a collection → array of plain objects
 async function fsGetCollection(col) {
   try {
-    const { db, collection, getDocs } = await getDb();
-    const snap = await getDocs(collection(db, col));
-    return snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
-  } catch(e) { console.error('fsGetCollection error', col, e); return []; }
+    if (_cache[col]) return Object.values(_cache[col]);
+    const res = await fetch(`${RTDB}/${col}.json`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data) { _cache[col] = {}; return []; }
+    _cache[col] = data;
+    return Object.values(data);
+  } catch(e) { console.error("fsGet error", col, e); return Object.values(_cache[col] || {}); }
 }
 
-// Write/overwrite a document by ID
 async function fsSetDoc(col, docId, obj) {
   try {
-    const { db, doc, setDoc } = await getDb();
-    const { _docId, ...data } = obj;
-    await setDoc(doc(db, col, String(docId)), data);
-  } catch(e) { console.error('fsSetDoc error', col, docId, e); }
+    const { _docId, ...clean } = obj;
+    if (!_cache[col]) _cache[col] = {};
+    _cache[col][String(docId)] = clean;
+    await fetch(`${RTDB}/${col}/${docId}.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(clean),
+    });
+  } catch(e) { console.error("fsSet error", col, docId, e); }
 }
 
-// Delete a document by ID
 async function fsDeleteDoc(col, docId) {
   try {
-    const { db, doc, deleteDoc } = await getDb();
-    await deleteDoc(doc(db, col, String(docId)));
-  } catch(e) { console.error('fsDeleteDoc error', col, docId, e); }
+    if (_cache[col]) delete _cache[col][String(docId)];
+    await fetch(`${RTDB}/${col}/${docId}.json`, { method: "DELETE" });
+  } catch(e) { console.error("fsDel error", col, docId, e); }
 }
 
-// localStorage (session + page only)
+// localStorage (session + page only — not user data)
 const load = k => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 function getPlan(amount) { return PLANS.find(p => amount >= p.min && amount <= p.max) || null; }
@@ -290,18 +281,52 @@ export default function App() {
 
   const setPage = p => { setPageRaw(p); localStorage.setItem("bg_page", p); };
 
-  // ── Load ALL data from Firestore on mount ──
+  // ── Load ALL data from RTDB on mount, migrate localStorage if needed ──
   useEffect(() => {
     (async () => {
       setDbLoading(true);
-      const [u, m, w] = await Promise.all([
-        fsGetCollection("bg_users"),
-        fsGetCollection("bg_chats"),
-        fsGetCollection("bg_withdraws"),
-      ]);
-      setUsers(u);
-      setMsgs(m);
-      setWithdraws(w);
+      try {
+        // 1. Migrate any existing localStorage users → RTDB (one-time)
+        const localUsers = (() => { try { return JSON.parse(localStorage.getItem("bg_users") || "[]"); } catch { return []; } })();
+        const localMsgs  = (() => { try { return JSON.parse(localStorage.getItem("bg_chats") || "[]"); } catch { return []; } })();
+        const localWs    = (() => { try { return JSON.parse(localStorage.getItem("bg_withdraws") || "[]"); } catch { return []; } })();
+
+        if (localUsers.length > 0 && !localStorage.getItem("bg_migrated")) {
+          // Write local users to RTDB
+          for (const u of localUsers) {
+            const { _docId, ...data } = u;
+            await fsSetDoc("bg_users", String(u.id), data);
+          }
+          for (const m of localMsgs) {
+            const { _docId, ...data } = m;
+            await fsSetDoc("bg_chats", String(m.id), data);
+          }
+          for (const w of localWs) {
+            const { _docId, ...data } = w;
+            await fsSetDoc("bg_withdraws", String(w.id), data);
+          }
+          localStorage.setItem("bg_migrated", "1");
+        }
+
+        // 2. Load fresh from RTDB
+        const [u, m, w] = await Promise.all([
+          fsGetCollection("bg_users"),
+          fsGetCollection("bg_chats"),
+          fsGetCollection("bg_withdraws"),
+        ]);
+        setUsers(u);
+        setMsgs(m);
+        setWithdraws(w);
+
+        // 3. Refresh current session user from RTDB
+        const session = (() => { try { return JSON.parse(localStorage.getItem("bg_session") || "null"); } catch { return null; } })();
+        if (session) {
+          const fresh = u.find(x => x.id === session.id);
+          if (fresh) { setCurrentUserRaw(fresh); localStorage.setItem("bg_session", JSON.stringify(fresh)); }
+        }
+      } catch(e) {
+        console.error("Load error", e);
+      }
       setDbLoading(false);
     })();
   }, []);
