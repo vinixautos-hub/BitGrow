@@ -127,9 +127,8 @@ Object.entries(COUNTRY_DATA).forEach(([country, data]) => {
 const COUNTRIES = Object.keys(COUNTRY_DATA).sort();
 const CURRENCIES = [...new Set(Object.values(COUNTRY_DATA).map(d => d.currency))].sort();
 
-// ─── FIREBASE FIRESTORE CONFIG ───────────────────────────────────────────────
-// Shared cloud database — works across ALL browsers, devices, and accounts
-const FIREBASE_DB_CONFIG = {
+// ─── FIREBASE FIRESTORE (official SDK via CDN) ───────────────────────────────
+const FIREBASE_CONFIG = {
   apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
   authDomain: "bitgrow-e379d.firebaseapp.com",
   projectId: "bitgrow-e379d",
@@ -138,82 +137,44 @@ const FIREBASE_DB_CONFIG = {
   appId: "1:968123074537:web:f4db6242f8964715586d78",
 };
 
-// Firestore REST API base (no SDK needed — plain fetch)
-const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_DB_CONFIG.projectId}/databases/(default)/documents`;
-
-// Convert Firestore document fields → plain JS object
-function fsToObj(doc) {
-  if (!doc || !doc.fields) return null;
-  const out = {};
-  for (const [k, v] of Object.entries(doc.fields)) {
-    if (v.stringValue !== undefined) out[k] = v.stringValue;
-    else if (v.integerValue !== undefined) out[k] = Number(v.integerValue);
-    else if (v.doubleValue !== undefined) out[k] = Number(v.doubleValue);
-    else if (v.booleanValue !== undefined) out[k] = v.booleanValue;
-    else if (v.nullValue !== undefined) out[k] = null;
-    else if (v.arrayValue !== undefined) out[k] = (v.arrayValue.values || []).map(item => {
-      if (item.stringValue !== undefined) return item.stringValue;
-      if (item.integerValue !== undefined) return Number(item.integerValue);
-      if (item.doubleValue !== undefined) return Number(item.doubleValue);
-      if (item.booleanValue !== undefined) return item.booleanValue;
-      if (item.mapValue !== undefined) return fsToObj({ fields: item.mapValue.fields });
-      return null;
-    });
-    else if (v.mapValue !== undefined) out[k] = fsToObj({ fields: v.mapValue.fields });
-  }
-  return out;
-}
-
-// Convert plain JS value → Firestore field value
-function toFsValue(val) {
-  if (val === null || val === undefined) return { nullValue: null };
-  if (typeof val === 'boolean') return { booleanValue: val };
-  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
-  if (typeof val === 'string') return { stringValue: val };
-  if (Array.isArray(val)) return { arrayValue: { values: val.map(toFsValue) } };
-  if (typeof val === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(val).map(([k, v]) => [k, toFsValue(v)])) } };
-  return { stringValue: String(val) };
-}
-
-// Convert plain JS object → Firestore fields
-function objToFs(obj) {
-  const fields = {};
-  for (const [k, v] of Object.entries(obj)) fields[k] = toFsValue(v);
-  return fields;
+// Lazy-load Firebase SDK and return {db}
+let _db = null;
+async function getDb() {
+  if (_db) return _db;
+  const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+  const { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, query, limit } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js");
+  const app = getApps().length ? getApp() : initializeApp(FIREBASE_CONFIG);
+  _db = { db: getFirestore(app), collection, getDocs, doc, setDoc, deleteDoc, query, limit };
+  return _db;
 }
 
 // Read a collection → array of plain objects
 async function fsGetCollection(col) {
   try {
-    const res = await fetch(`${FS_BASE}/${col}?pageSize=500`);
-    const data = await res.json();
-    if (!data.documents) return [];
-    return data.documents.map(doc => ({ ...fsToObj(doc), _docId: doc.name.split('/').pop() }));
-  } catch(e) { console.error('fsGetCollection error', e); return []; }
+    const { db, collection, getDocs } = await getDb();
+    const snap = await getDocs(collection(db, col));
+    return snap.docs.map(d => ({ ...d.data(), _docId: d.id }));
+  } catch(e) { console.error('fsGetCollection error', col, e); return []; }
 }
 
 // Write/overwrite a document by ID
 async function fsSetDoc(col, docId, obj) {
   try {
-    const fields = objToFs(obj);
-    const updateMask = Object.keys(fields).map(f => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
-    const res = await fetch(`${FS_BASE}/${col}/${docId}?${updateMask}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields }),
-    });
-    return await res.json();
-  } catch(e) { console.error('fsSetDoc error', e); }
+    const { db, doc, setDoc } = await getDb();
+    const { _docId, ...data } = obj;
+    await setDoc(doc(db, col, String(docId)), data);
+  } catch(e) { console.error('fsSetDoc error', col, docId, e); }
 }
 
 // Delete a document by ID
 async function fsDeleteDoc(col, docId) {
   try {
-    await fetch(`${FS_BASE}/${col}/${docId}`, { method: 'DELETE' });
-  } catch(e) { console.error('fsDeleteDoc error', e); }
+    const { db, doc, deleteDoc } = await getDb();
+    await deleteDoc(doc(db, col, String(docId)));
+  } catch(e) { console.error('fsDeleteDoc error', col, docId, e); }
 }
 
-// localStorage fallbacks (session + page only — not user data)
+// localStorage (session + page only)
 const load = k => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 function getPlan(amount) { return PLANS.find(p => amount >= p.min && amount <= p.max) || null; }
@@ -1078,15 +1039,6 @@ const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";
 const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
 const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";
 
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
-  authDomain: "bitgrow-e379d.firebaseapp.com",
-  projectId: "bitgrow-e379d",
-  storageBucket: "bitgrow-e379d.firebasestorage.app",
-  messagingSenderId: "968123074537",
-  appId: "1:968123074537:web:f4db6242f8964715586d78",
-};
-
 async function sendWelcomeEmail(user) {
   try {
     await fetch("https://api.emailjs.com/api/v1.0/email/send", {
@@ -1100,17 +1052,17 @@ async function sendWelcomeEmail(user) {
   } catch (e) { console.warn("EmailJS send failed:", e); }
 }
 
-let firebaseApp = null;
 let firebaseAuth = null;
 async function initFirebase() {
   if (firebaseAuth) return firebaseAuth;
   try {
-    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
+    await getDb(); // ensure app initialized
+    const { getApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
     const { getAuth, GoogleAuthProvider, signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-    if (!getApps().length) firebaseApp = initializeApp(FIREBASE_CONFIG);
-    firebaseAuth = { getAuth, GoogleAuthProvider, signInWithPopup, auth: getAuth(firebaseApp) };
+    const app = getApp();
+    firebaseAuth = { GoogleAuthProvider, signInWithPopup, auth: getAuth(app) };
     return firebaseAuth;
-  } catch (e) { console.warn("Firebase init failed:", e); return null; }
+  } catch (e) { console.warn("Firebase auth init failed:", e); return null; }
 }
 async function signInWithGoogle() {
   const fb = await initFirebase();
