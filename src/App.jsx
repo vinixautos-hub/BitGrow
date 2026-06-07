@@ -127,6 +127,93 @@ Object.entries(COUNTRY_DATA).forEach(([country, data]) => {
 const COUNTRIES = Object.keys(COUNTRY_DATA).sort();
 const CURRENCIES = [...new Set(Object.values(COUNTRY_DATA).map(d => d.currency))].sort();
 
+// ─── FIREBASE FIRESTORE CONFIG ───────────────────────────────────────────────
+// Shared cloud database — works across ALL browsers, devices, and accounts
+const FIREBASE_DB_CONFIG = {
+  apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
+  authDomain: "bitgrow-e379d.firebaseapp.com",
+  projectId: "bitgrow-e379d",
+  storageBucket: "bitgrow-e379d.firebasestorage.app",
+  messagingSenderId: "968123074537",
+  appId: "1:968123074537:web:f4db6242f8964715586d78",
+};
+
+// Firestore REST API base (no SDK needed — plain fetch)
+const FS_BASE = `https://firestore.googleapis.com/v1/projects/${FIREBASE_DB_CONFIG.projectId}/databases/(default)/documents`;
+
+// Convert Firestore document fields → plain JS object
+function fsToObj(doc) {
+  if (!doc || !doc.fields) return null;
+  const out = {};
+  for (const [k, v] of Object.entries(doc.fields)) {
+    if (v.stringValue !== undefined) out[k] = v.stringValue;
+    else if (v.integerValue !== undefined) out[k] = Number(v.integerValue);
+    else if (v.doubleValue !== undefined) out[k] = Number(v.doubleValue);
+    else if (v.booleanValue !== undefined) out[k] = v.booleanValue;
+    else if (v.nullValue !== undefined) out[k] = null;
+    else if (v.arrayValue !== undefined) out[k] = (v.arrayValue.values || []).map(item => {
+      if (item.stringValue !== undefined) return item.stringValue;
+      if (item.integerValue !== undefined) return Number(item.integerValue);
+      if (item.doubleValue !== undefined) return Number(item.doubleValue);
+      if (item.booleanValue !== undefined) return item.booleanValue;
+      if (item.mapValue !== undefined) return fsToObj({ fields: item.mapValue.fields });
+      return null;
+    });
+    else if (v.mapValue !== undefined) out[k] = fsToObj({ fields: v.mapValue.fields });
+  }
+  return out;
+}
+
+// Convert plain JS value → Firestore field value
+function toFsValue(val) {
+  if (val === null || val === undefined) return { nullValue: null };
+  if (typeof val === 'boolean') return { booleanValue: val };
+  if (typeof val === 'number') return Number.isInteger(val) ? { integerValue: String(val) } : { doubleValue: val };
+  if (typeof val === 'string') return { stringValue: val };
+  if (Array.isArray(val)) return { arrayValue: { values: val.map(toFsValue) } };
+  if (typeof val === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(val).map(([k, v]) => [k, toFsValue(v)])) } };
+  return { stringValue: String(val) };
+}
+
+// Convert plain JS object → Firestore fields
+function objToFs(obj) {
+  const fields = {};
+  for (const [k, v] of Object.entries(obj)) fields[k] = toFsValue(v);
+  return fields;
+}
+
+// Read a collection → array of plain objects
+async function fsGetCollection(col) {
+  try {
+    const res = await fetch(`${FS_BASE}/${col}?pageSize=500`);
+    const data = await res.json();
+    if (!data.documents) return [];
+    return data.documents.map(doc => ({ ...fsToObj(doc), _docId: doc.name.split('/').pop() }));
+  } catch(e) { console.error('fsGetCollection error', e); return []; }
+}
+
+// Write/overwrite a document by ID
+async function fsSetDoc(col, docId, obj) {
+  try {
+    const fields = objToFs(obj);
+    const updateMask = Object.keys(fields).map(f => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+    const res = await fetch(`${FS_BASE}/${col}/${docId}?${updateMask}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    });
+    return await res.json();
+  } catch(e) { console.error('fsSetDoc error', e); }
+}
+
+// Delete a document by ID
+async function fsDeleteDoc(col, docId) {
+  try {
+    await fetch(`${FS_BASE}/${col}/${docId}`, { method: 'DELETE' });
+  } catch(e) { console.error('fsDeleteDoc error', e); }
+}
+
+// localStorage fallbacks (session + page only — not user data)
 const load = k => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 function getPlan(amount) { return PLANS.find(p => amount >= p.min && amount <= p.max) || null; }
@@ -218,15 +305,16 @@ const BtcIcon = () => <svg viewBox="0 0 24 24" width="16" height="16" fill="#fbb
 
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [users,       setUsers]       = useState(()=>load("bg_users"));
-  const [msgs,        setMsgs]        = useState(()=>load("bg_chats"));
-  const [withdraws,   setWithdraws]   = useState(()=>load("bg_withdraws"));
+  const [users,       setUsers]       = useState([]);
+  const [msgs,        setMsgs]        = useState([]);
+  const [withdraws,   setWithdraws]   = useState([]);
   const [pageHistory, setPageHistory] = useState([]);
   const [dashTab,     setDashTab]     = useState("overview");
   const [notifCount,  setNotifCount]  = useState(0);
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
+  const [dbLoading,   setDbLoading]   = useState(true);
 
-  // ── FIX 1: Persist session + page so refresh returns to dashboard ──
+  // Session stored in localStorage (browser-local, not synced — just remembers WHO is logged in)
   const [currentUser, setCurrentUserRaw] = useState(()=>{
     try { const s=localStorage.getItem("bg_session"); return s?JSON.parse(s):null; } catch{return null;}
   });
@@ -241,25 +329,102 @@ export default function App() {
 
   const setPage = p => { setPageRaw(p); localStorage.setItem("bg_page", p); };
 
-  const updateUsers     = u => { setUsers(u);     save("bg_users",u); };
-  const updateMsgs      = m => { setMsgs(m);      save("bg_chats",m); };
-  const updateWithdraws = w => { setWithdraws(w); save("bg_withdraws",w); };
+  // ── Load ALL data from Firestore on mount ──
+  useEffect(() => {
+    (async () => {
+      setDbLoading(true);
+      const [u, m, w] = await Promise.all([
+        fsGetCollection("bg_users"),
+        fsGetCollection("bg_chats"),
+        fsGetCollection("bg_withdraws"),
+      ]);
+      setUsers(u);
+      setMsgs(m);
+      setWithdraws(w);
+      setDbLoading(false);
+    })();
+  }, []);
 
-  const setCurrentUser = user => {
-    setCurrentUserRaw(user);
-    if(user) { localStorage.setItem("bg_session",JSON.stringify(user)); localStorage.setItem("bg_page","dashboard"); }
-    else { localStorage.removeItem("bg_session"); localStorage.removeItem("bg_page"); }
+  // ── Keep currentUser fresh when users array updates ──
+  useEffect(()=>{
+    if(currentUser){
+      const found = users.find(u=>u.id===currentUser.id);
+      if(found){
+        const { _docId, ...fresh } = found;
+        setCurrentUserRaw(fresh);
+        localStorage.setItem("bg_session", JSON.stringify(fresh));
+      }
+    }
+  },[users]);
+
+  // ── Poll Firestore every 20s to sync across devices ──
+  useEffect(()=>{
+    const id = setInterval(async ()=>{
+      const [u, m, w] = await Promise.all([
+        fsGetCollection("bg_users"),
+        fsGetCollection("bg_chats"),
+        fsGetCollection("bg_withdraws"),
+      ]);
+      setUsers(u); setMsgs(m); setWithdraws(w);
+    }, 20000);
+    return ()=>clearInterval(id);
+  },[]);
+
+  // ── updateUsers: write each user to Firestore ──
+  const updateUsers = async (newUsers) => {
+    setUsers(newUsers);
+    for (const u of newUsers) {
+      const { _docId, ...data } = u;
+      await fsSetDoc("bg_users", String(u.id), data);
+    }
+    // Keep current session fresh
+    if (currentUser) {
+      const found = newUsers.find(u => u.id === currentUser.id);
+      if (found) {
+        const { _docId, ...fresh } = found;
+        setCurrentUserRaw(fresh);
+        localStorage.setItem("bg_session", JSON.stringify(fresh));
+      }
+    }
   };
 
-  useEffect(()=>{
-    if(currentUser){ const fresh=users.find(u=>u.id===currentUser.id); if(fresh){ setCurrentUserRaw(fresh); localStorage.setItem("bg_session",JSON.stringify(fresh)); } }
-  },[users]);
+  // ── updateMsgs: write each msg to Firestore ──
+  const updateMsgs = async (newMsgs) => {
+    setMsgs(newMsgs);
+    for (const m of newMsgs) {
+      if (!m._docId) {
+        const { _docId, ...data } = m;
+        await fsSetDoc("bg_chats", String(m.id), data);
+      }
+    }
+  };
+
+  // ── updateWithdraws: write each withdrawal to Firestore ──
+  const updateWithdraws = async (newWithdraws) => {
+    setWithdraws(newWithdraws);
+    for (const w of newWithdraws) {
+      const { _docId, ...data } = w;
+      await fsSetDoc("bg_withdraws", String(w.id), data);
+    }
+  };
+
+  const setCurrentUser = user => {
+    if (user) {
+      // Strip Firestore meta before storing in session
+      const { _docId, ...cleanUser } = user;
+      setCurrentUserRaw(cleanUser);
+      localStorage.setItem("bg_session", JSON.stringify(cleanUser));
+      localStorage.setItem("bg_page", "dashboard");
+    } else {
+      setCurrentUserRaw(null);
+      localStorage.removeItem("bg_session");
+      localStorage.removeItem("bg_page");
+    }
+  };
 
   const navigate = p => { setPageHistory(h=>[...h,page]); setPage(p); };
   const goBack   = () => setPageHistory(h=>{ const prev=h[h.length-1]||"home"; setPage(prev); return h.slice(0,-1); });
   const logout   = () => { setCurrentUser(null); setPage("home"); setPageHistory([]); setDashTab("overview"); };
-
-  useEffect(()=>{ const id=setInterval(()=>setUsers(u=>[...u]),15000); return()=>clearInterval(id); },[]);
 
   // ── FIX 5: Notification count ──
   useEffect(()=>{
@@ -273,6 +438,18 @@ export default function App() {
                   currentUser,setCurrentUser,page,navigate,goBack,pageHistory,
                   logout,isAdmin,dashTab,setDashTab,notifCount,setNotifCount,
                   notifPanelOpen, setNotifPanelOpen };
+
+  // Show loading screen while fetching from Firestore
+  if (dbLoading) return (
+    <div style={{fontFamily:"'Sora','Segoe UI',sans-serif",minHeight:"100vh",background:"#07080f",color:"#e8eaf0",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:20}}>
+      <div style={{width:52,height:52,background:"linear-gradient(135deg,#fbbf24,#f97316)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:26,color:"#07080f"}}>B</div>
+      <div style={{display:"flex",alignItems:"center",gap:12}}>
+        <div style={{width:20,height:20,border:"3px solid #fbbf2444",borderTopColor:"#fbbf24",borderRadius:"50%",animation:"spin 0.7s linear infinite"}}/>
+        <span style={{color:"#6b7280",fontSize:14}}>Loading BitGrow...</span>
+      </div>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
 
   return (
     <div style={{fontFamily:"'Sora','Segoe UI',sans-serif",minHeight:"100vh",background:"#07080f",color:"#e8eaf0"}}>
@@ -447,30 +624,28 @@ function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }
 
   const isGoogle = currentUser.authMethod === "google";
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     setErr("");
     if (!isGoogle) {
       if (!password) return setErr("Please enter your password to confirm.");
       if (password !== currentUser.password) return setErr("Incorrect password. Account not deleted.");
     }
     setLoading(true);
-    setTimeout(() => {
-      // Remove user and all their data
-      const remaining = users.filter(u => u.id !== currentUser.id);
-      updateUsers(remaining);
-      // Clear session
-      localStorage.removeItem("bg_session");
-      localStorage.removeItem("bg_page");
-      // Remove their chats and withdrawals
-      try {
-        const chats = JSON.parse(localStorage.getItem("bg_chats") || "[]");
-        localStorage.setItem("bg_chats", JSON.stringify(chats.filter(m => m.userId !== currentUser.id)));
-        const ws = JSON.parse(localStorage.getItem("bg_withdraws") || "[]");
-        localStorage.setItem("bg_withdraws", JSON.stringify(ws.filter(w => w.userId !== currentUser.id)));
-      } catch(e) {}
-      setLoading(false);
-      logout();
-    }, 1500);
+    try {
+      await fsDeleteDoc("bg_users", String(currentUser.id));
+      const allChats = await fsGetCollection("bg_chats");
+      for (const m of allChats.filter(m => m.userId === currentUser.id)) {
+        await fsDeleteDoc("bg_chats", String(m.id));
+      }
+      const allWs = await fsGetCollection("bg_withdraws");
+      for (const w of allWs.filter(w => w.userId === currentUser.id)) {
+        await fsDeleteDoc("bg_withdraws", String(w.id));
+      }
+    } catch(e) { console.error("Delete error", e); }
+    localStorage.removeItem("bg_session");
+    localStorage.removeItem("bg_page");
+    setLoading(false);
+    logout();
   };
 
   return (
@@ -578,21 +753,21 @@ function SecurityModal({ currentUser, users, updateUsers, onClose }) {
   const [profile, setProfile] = useState({ phone: currentUser.phone || "", city: currentUser.city || "", country: currentUser.country || "", address: currentUser.address || "", currency: currentUser.currency || "" });
   const [msg, setMsg] = useState(null);
 
-  const savePassword = () => {
+  const savePassword = async () => {
     setMsg(null);
     if (!pw.current || !pw.newPw || !pw.confirm) return setMsg({ type: "err", text: "All fields are required." });
     if (pw.current !== currentUser.password) return setMsg({ type: "err", text: "Current password is incorrect." });
     const errs = validatePassword(pw.newPw);
     if (errs.length) return setMsg({ type: "err", text: "New password must include: " + errs.join(", ") + "." });
     if (pw.newPw !== pw.confirm) return setMsg({ type: "err", text: "New passwords do not match." });
-    updateUsers(users.map(u => u.id === currentUser.id ? { ...u, password: pw.newPw } : u));
+    await updateUsers(users.map(u => u.id === currentUser.id ? { ...u, password: pw.newPw } : u));
     setPw({ current: "", newPw: "", confirm: "" });
     setMsg({ type: "ok", text: "Password updated successfully." });
   };
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
     setMsg(null);
-    updateUsers(users.map(u => u.id === currentUser.id ? { ...u, ...profile } : u));
+    await updateUsers(users.map(u => u.id === currentUser.id ? { ...u, ...profile } : u));
     setMsg({ type: "ok", text: "Profile updated successfully." });
   };
 
@@ -1020,12 +1195,12 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
     setGLoading(false);
   };
 
-  const submit = () => {
+  const [regLoading, setRegLoading] = useState(false);
+  const submit = async () => {
     setErr("");
     const { firstName, lastName, email, phone, currency, country, state, city, address, username, password, confirm, declared } = form;
     const isGoogle = !!googleUser;
     if (!firstName || !lastName || !email || !currency || !country || !state || !city || !address || !username) return setErr("Please fill in all required fields.");
-    // ── FIX 2: Phone validation ──
     if (!phone || phone.trim().length < 5) return setErr("Please enter a valid phone number.");
     if (!validatePhone(phone, country)) {
       const dialCode = COUNTRY_DATA[country]?.code || "";
@@ -1038,12 +1213,17 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
       if (password !== confirm) return setErr("Passwords do not match.");
     }
     if (!declared) return setErr("You must declare that your information is accurate to proceed.");
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) return setErr("An account with this email already exists.");
-    if (users.find(u => u.username?.toLowerCase() === username.toLowerCase())) return setErr("That username is already taken.");
+
+    // Always check duplicates from fresh Firestore data
+    setRegLoading(true);
+    const freshUsers = await fsGetCollection("bg_users");
+    setRegLoading(false);
+    if (freshUsers.find(u => u.email.toLowerCase() === email.toLowerCase())) return setErr("An account with this email already exists.");
+    if (freshUsers.find(u => u.username?.toLowerCase() === username.toLowerCase())) return setErr("That username is already taken.");
 
     const p = gen12Phrase(), ref = genReferralCode();
     let referredBy = null;
-    if (form.referral.trim()) { const ru = users.find(u => u.referralCode === form.referral.trim().toUpperCase()); if (ru) referredBy = ru.id; }
+    if (form.referral.trim()) { const ru = freshUsers.find(u => u.referralCode === form.referral.trim().toUpperCase()); if (ru) referredBy = ru.id; }
 
     const user = {
       id: Date.now(), name: `${firstName.trim()} ${lastName.trim()}`,
@@ -1056,11 +1236,20 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
       phrase: p, referralCode: ref, referredBy,
       investments: [], createdAt: Date.now(), manualBonus: 0,
     };
-    if (referredBy) updateUsers([...users.map(u => u.id === referredBy ? { ...u, manualBonus: (u.manualBonus || 0) + 10 } : u), user]);
-    else updateUsers([...users, user]);
+
+    // Write to Firestore directly
+    await fsSetDoc("bg_users", String(user.id), user);
+    if (referredBy) {
+      const refUser = freshUsers.find(u => u.id === referredBy);
+      if (refUser) await fsSetDoc("bg_users", String(referredBy), { ...refUser, manualBonus: (refUser.manualBonus || 0) + 10 });
+    }
 
     const welcomeMsg = { id: Date.now()+1, userId: user.id, userName: user.name, text: `Welcome to BitGrow, ${user.firstName}! 🎉 Your account is now active. To get started, head to the Invest tab, select a plan, and send your deposit to our BSC wallet. Our team is here 24/7 if you need anything. — BitGrow Team`, from: "admin", time: new Date().toLocaleTimeString(), read: false };
-    save("bg_chats", [...(JSON.parse(localStorage.getItem("bg_chats")||"[]")), welcomeMsg]);
+    await fsSetDoc("bg_chats", String(welcomeMsg.id), welcomeMsg);
+
+    // Update local state
+    setUsers(prev => [...prev, user]);
+    setMsgs(prev => [...prev, welcomeMsg]);
     setPhrase(p); setNewUser(user); setStep(3);
     sendWelcomeEmail(user);
   };
@@ -1260,7 +1449,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             <span style={{ fontSize: 13, color: "#9ca3af", lineHeight: 1.6 }}>I declare that the information provided is accurate and I am at least 18 years old. I agree to the <span style={{ color: "#fbbf24" }}>Terms of Service</span> and <span style={{ color: "#fbbf24" }}>Privacy Policy</span>.</span>
           </label>
 
-          <PrimaryBtn onClick={submit}>Create My Account →</PrimaryBtn>
+          <LoadingBtn onClick={submit} loading={regLoading}>Create My Account →</LoadingBtn>
           <div style={{ textAlign: "center", fontSize: 13, color: "#6b7280" }}>Already have an account? <span onClick={() => navigate("login")} style={{ color: "#fbbf24", cursor: "pointer", fontWeight: 600 }}>Sign In</span></div>
         </div>
       </div>
@@ -1274,20 +1463,28 @@ function LoginPage({ users, setCurrentUser, navigate }) {
   const [gLoading, setGLoading] = useState(false);
   const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
-  const submit = () => {
-    setErr("");
-    const user = users.find(u => u.email.toLowerCase() === form.email.toLowerCase() && u.password === form.password);
+  const [loginLoading, setLoginLoading] = useState(false);
+  const submit = async () => {
+    setErr(""); setLoginLoading(true);
+    // Always fetch fresh from Firestore so credentials are cross-device accurate
+    const freshUsers = await fsGetCollection("bg_users");
+    const user = freshUsers.find(u => u.email.toLowerCase() === form.email.toLowerCase() && u.password === form.password);
+    setLoginLoading(false);
     if (!user) return setErr("Incorrect email or password.");
-    setCurrentUser(user); navigate("dashboard");
+    const { _docId, ...cleanUser } = user;
+    setCurrentUser(cleanUser); navigate("dashboard");
   };
 
   const handleGoogleLogin = async () => {
     setErr(""); setGLoading(true);
     try {
       const gUser = await signInWithGoogle();
-      const existing = users.find(u => u.googleUid === gUser.uid || u.email.toLowerCase() === gUser.email.toLowerCase());
+      // Fetch fresh from Firestore — cross-device
+      const freshUsers = await fsGetCollection("bg_users");
+      const existing = freshUsers.find(u => u.googleUid === gUser.uid || u.email.toLowerCase() === gUser.email.toLowerCase());
       if (!existing) { setErr("No account found. Please sign up first."); setGLoading(false); return; }
-      setCurrentUser(existing); navigate("dashboard");
+      const { _docId, ...cleanUser } = existing;
+      setCurrentUser(cleanUser); navigate("dashboard");
     } catch (e) { setErr("Google Sign-In failed: " + e.message); }
     setGLoading(false);
   };
@@ -1306,7 +1503,7 @@ function LoginPage({ users, setCurrentUser, navigate }) {
       </div>
       <Input label="Email Address" value={form.email} onChange={f("email")} placeholder="you@example.com" type="email" />
       <Input label="Password" value={form.password} onChange={f("password")} placeholder="••••••••" type="password" />
-      <PrimaryBtn onClick={submit}>Sign In</PrimaryBtn>
+      <LoadingBtn onClick={submit} loading={loginLoading}>Sign In</LoadingBtn>
       <div style={{ textAlign: "center", fontSize: 13, color: "#6b7280" }}>New to BitGrow? <span onClick={() => navigate("register")} style={{ color: "#fbbf24", cursor: "pointer", fontWeight: 600 }}>Create an account</span></div>
       <div style={{ textAlign: "center", fontSize: 13, color: "#6b7280" }}>Forgot access? <span onClick={() => navigate("recover")} style={{ color: "#6366f1", cursor: "pointer", fontWeight: 600 }}>Recover with 12-phrase key</span></div>
     </AuthLayout>
@@ -1319,14 +1516,19 @@ function RecoverPage({ users, setCurrentUser, navigate }) {
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
-  const submit = () => {
+  const submit = async () => {
     setErr("");
-    const user = users.find(u => u.phrase === phrase.trim().toLowerCase());
+    // Fetch fresh from Firestore
+    const freshUsers = await fsGetCollection("bg_users");
+    const user = freshUsers.find(u => u.phrase === phrase.trim().toLowerCase());
     if (!user) return setErr("Recovery phrase not recognised.");
     const errs = validatePassword(newPw);
     if (errs.length) return setErr("Password must include: " + errs.join(", ") + ".");
     if (newPw !== confirm) return setErr("Passwords do not match.");
-    setCurrentUser({ ...user, password: newPw }); setDone(true);
+    const updated = { ...user, password: newPw };
+    const { _docId, ...data } = updated;
+    await fsSetDoc("bg_users", String(user.id), data);
+    setCurrentUser(data); setDone(true);
   };
   if (done) return (
     <AuthLayout title="Account Recovered" subtitle="You're back!" navigate={navigate}>
@@ -1382,7 +1584,11 @@ function Dashboard({ currentUser, users, updateUsers, msgs, updateMsgs, withdraw
   const myWithdraws = withdraws.filter(w => w.userId === user.id);
   const referrals = users.filter(u => u.referredBy === user.id);
   useEffect(() => { const id = setInterval(() => setTick(t => t + 1), 15000); return () => clearInterval(id); }, []);
-  const sendChat = msg => updateMsgs([...msgs, { id: Date.now(), userId: user.id, userName: user.name, text: msg, from: "user", time: new Date().toLocaleTimeString() }]);
+  const sendChat = async msg => {
+    const newMsg = { id: Date.now(), userId: user.id, userName: user.name, text: msg, from: "user", time: new Date().toLocaleTimeString(), read: false };
+    await fsSetDoc("bg_chats", String(newMsg.id), newMsg);
+    setMsgs(prev => [...prev, newMsg]);
+  };
 
   return (
     <div className="fadein" style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 16px 100px" }}>
@@ -1503,7 +1709,7 @@ function InvestTab({ user, users, updateUsers }) {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  const submit = () => {
+  const submit = async () => {
     setErr("");
     if (!selectedPlan) return setErr("Please select an investment plan.");
     if (!amount || isNaN(amount) || +amount < MIN_INVEST) return setErr(`Minimum investment is ${usd(MIN_INVEST)}.`);
@@ -1511,11 +1717,9 @@ function InvestTab({ user, users, updateUsers }) {
     if (!p || p.id !== selectedPlan.id) return setErr(`Amount is outside the ${selectedPlan.name} range.`);
     if (!txid.trim()) return setErr("Please enter your BSC Transaction ID.");
     setLoading(true);
-    setTimeout(() => {
-      const inv = { id: Date.now(), amount: +amount, txid: txid.trim(), plan: p.id, startedAt: Date.now(), status: "pending_verification", verifiedAt: null };
-      updateUsers(users.map(u => u.id === user.id ? { ...u, investments: [...(u.investments || []), inv] } : u));
-      setLoading(false); setSubmitted(true);
-    }, 1800);
+    const inv = { id: Date.now(), amount: +amount, txid: txid.trim(), plan: p.id, startedAt: Date.now(), status: "pending_verification", verifiedAt: null };
+    await updateUsers(users.map(u => u.id === user.id ? { ...u, investments: [...(u.investments || []), inv] } : u));
+    setLoading(false); setSubmitted(true);
   };
 
   if (submitted) return (
@@ -1586,7 +1790,7 @@ function WithdrawTab({ user, totalBalance, withdraws, updateWithdraws, myWithdra
   const withdrawUnlocked = activeInv.some(i => canWithdraw(i));
   const daysLeft = earliest ? daysUntilWithdraw(earliest) : WITHDRAW_LOCK_DAYS;
 
-  const submit = () => {
+  const submit = async () => {
     setWErr("");
     if (!withdrawUnlocked) return setWErr(`Withdrawal locked for ${daysLeft} more day${daysLeft !== 1 ? "s" : ""}.`);
     if (!wForm.amount || isNaN(wForm.amount) || +wForm.amount <= 0) return setWErr("Enter a valid amount.");
@@ -1594,10 +1798,8 @@ function WithdrawTab({ user, totalBalance, withdraws, updateWithdraws, myWithdra
     if (+wForm.amount > available) return setWErr(`Insufficient balance. Available: ${usd(available)}`);
     if (!wForm.wallet.trim()) return setWErr("Enter your destination wallet address.");
     setWLoading(true);
-    setTimeout(() => {
-      updateWithdraws([...withdraws, { id: Date.now(), userId: user.id, userName: user.name, amount: +wForm.amount, wallet: wForm.wallet.trim(), network: wForm.network, status: "pending", createdAt: Date.now() }]);
-      setWLoading(false); setWDone(true);
-    }, 1800);
+    await updateWithdraws([...withdraws, { id: Date.now(), userId: user.id, userName: user.name, amount: +wForm.amount, wallet: wForm.wallet.trim(), network: wForm.network, status: "pending", createdAt: Date.now() }]);
+    setWLoading(false); setWDone(true);
   };
 
   if (wDone) return (
@@ -1757,11 +1959,11 @@ function AdminPanel({ users, updateUsers, msgs, updateMsgs, withdraws, updateWit
   const pendingInvestments = users.flatMap(u => (u.investments || []).filter(i => i.status === "pending_verification").map(i => ({ ...i, user: u })));
   const pendingWithdraws = withdraws.filter(w => w.status === "pending");
   const filtered = users.filter(u => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
-  const verifyInvestment = (uid, iid) => updateUsers(users.map(u => u.id === uid ? { ...u, investments: (u.investments || []).map(i => i.id === iid ? { ...i, status: "verified", verifiedAt: Date.now() } : i) } : u));
-  const rejectInvestment = (uid, iid) => updateUsers(users.map(u => u.id === uid ? { ...u, investments: (u.investments || []).map(i => i.id === iid ? { ...i, status: "rejected" } : i) } : u));
-  const applyBonus = (uid, amt) => { updateUsers(users.map(u => u.id === uid ? { ...u, manualBonus: (u.manualBonus || 0) + +amt } : u)); setBonusAmt(""); alert(`Adjustment of ${usd(+amt)} applied!`); };
-  const replyMsg = (uid, uname) => { if (!replyText.trim()) return; updateMsgs([...msgs, { id: Date.now(), userId: uid, userName: uname, text: replyText.trim(), from: "admin", time: new Date().toLocaleTimeString(), read: false }]); setReplyText(""); };
-  const updateW = (wid, status) => updateWithdraws(withdraws.map(w => w.id === wid ? { ...w, status, processedAt: Date.now() } : w));
+  const verifyInvestment = async (uid, iid) => { await updateUsers(users.map(u => u.id === uid ? { ...u, investments: (u.investments || []).map(i => i.id === iid ? { ...i, status: "verified", verifiedAt: Date.now() } : i) } : u)); };
+  const rejectInvestment = async (uid, iid) => { await updateUsers(users.map(u => u.id === uid ? { ...u, investments: (u.investments || []).map(i => i.id === iid ? { ...i, status: "rejected" } : i) } : u)); };
+  const applyBonus = async (uid, amt) => { await updateUsers(users.map(u => u.id === uid ? { ...u, manualBonus: (u.manualBonus || 0) + +amt } : u)); setBonusAmt(""); alert(`Adjustment of ${usd(+amt)} applied!`); };
+  const replyMsg = async (uid, uname) => { if (!replyText.trim()) return; await updateMsgs([...msgs, { id: Date.now(), userId: uid, userName: uname, text: replyText.trim(), from: "admin", time: new Date().toLocaleTimeString(), read: false }]); setReplyText(""); };
+  const updateW = async (wid, status) => { await updateWithdraws(withdraws.map(w => w.id === wid ? { ...w, status, processedAt: Date.now() } : w)); };
 
   const adminTabs = [{ id: "verify", label: "Verify", badge: pendingInvestments.length }, { id: "withdrawals", label: "Withdrawals", badge: pendingWithdraws.length }, { id: "users", label: "Users", badge: 0 }, { id: "chats", label: "Chats", badge: 0 }, { id: "stats", label: "Stats", badge: 0 }];
 
