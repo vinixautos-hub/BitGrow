@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
-const BITCOIN_ADDRESS  = "0x80a57072982ef59c94c2d04dea72d7f8529d4a37";
+const BITCOIN_ADDRESS  = "bc1q6zde7kxrz9pqkcqrqc0n4m6c4w7fh78fq33960";
 const ADMIN_EMAIL      = "ukohavictor05@gmail.com";
 const MIN_INVEST       = 100;
 const MIN_WITHDRAW     = 500;
@@ -1727,7 +1727,7 @@ function InvestTab({ user, users, updateUsers }) {
         <div className="card" style={{ padding: 24, border: "1px solid #fbbf2422" }}>
           <div>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fbbf24", fontWeight: 700, marginBottom: 10, fontSize: 13 }}><BtcIcon /> BSC (BEP20) Network Only</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fbbf24", fontWeight: 700, marginBottom: 10, fontSize: 13 }}><BtcIcon /> Only send Bitcoin (BTC) assets to this address. Other assets will be lost forever</div>
               <div style={{ background: "#080910", borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11, color: "#e8eaf0", wordBreak: "break-all", lineHeight: 1.9, marginBottom: 12, border: "1px solid #1e2030" }}>{BITCOIN_ADDRESS}</div>
               <button onClick={() => copyAddr(BITCOIN_ADDRESS)} style={{ width: "100%", background: addrCopied ? "#10b98118" : "#fbbf2418", color: addrCopied ? "#10b981" : "#fbbf24", border: `1px solid ${addrCopied ? "#10b98155" : "#fbbf2455"}`, padding: "9px", borderRadius: 8, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <CopyIcon /> {addrCopied ? "✓ Copied!" : "Copy Address"}
