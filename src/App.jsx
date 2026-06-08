@@ -1747,7 +1747,7 @@ function InvestTab({ user, users, updateUsers }) {
             </div>
           )}
           <Input label="Investment Amount (USD)" value={amount} onChange={e => setAmount(e.target.value)} placeholder={selectedPlan ? `Min $${selectedPlan.min.toLocaleString()}` : `Min $${MIN_INVEST}`} type="number" />
-          <Input label="BSC Transaction ID (TxID)" value={txid} onChange={e => setTxid(e.target.value)} placeholder="Paste your transaction hash after sending" />
+          <Input label="BTC Transaction ID (TxID)" value={txid} onChange={e => setTxid(e.target.value)} placeholder="Paste your transaction hash after sending" />
           <LoadingBtn onClick={submit} loading={loading}>Submit for Verification</LoadingBtn>
         </div>
       </div>
