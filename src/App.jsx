@@ -1303,7 +1303,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
   // ── Step 2: Full questionnaire ──
   return (
     <div className="fadein" style={{ minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
-      <div className="card" style={{ width: "100%", maxWidth: 560, padding: 40 }}>
+      <div className="card" style={{ width: "100%", maxWidth: 560, padding: "32px 16px", overflowX: "hidden" }}>
         <div style={{ marginBottom: 32 }}>
           <div style={{ width: 52, height: 52, background: "linear-gradient(135deg,#fbbf24,#f97316)", borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 24, color: "#07080f", marginBottom: 16 }}>B</div>
           <h2 style={{ fontWeight: 800, fontSize: 26, marginBottom: 6 }}>Create Account</h2>
