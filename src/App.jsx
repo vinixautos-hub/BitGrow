@@ -1293,9 +1293,9 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             <span style={{ color: "#374151", fontSize: 12, fontWeight: 600 }}>OR</span>
             <div style={{ flex: 1, height: 1, background: "#1e2030" }} />
           </div>
-          <button onClick={() => setStep(2)} style={{ width: "100%", background: "linear-gradient(135deg,#fbbf24,#f97316)", color: "#07080f", border: "none", padding: "13px 20px", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-            ✉️ Continue with Email
-          </button>
+          <button onClick={() => { setErr(""); setGoogleUser(null); setStep(2); }} style={{ width: "100%", background: "linear-gradient(135deg,#fbbf24,#f97316)", color: "#07080f", border: "none", padding: "13px 20px", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+  ✉️ Continue with Email
+</button>
           <div style={{ textAlign: "center", fontSize: 13, color: "#6b7280" }}>
             Already have an account? <span onClick={() => navigate("login")} style={{ color: "#fbbf24", cursor: "pointer", fontWeight: 600 }}>Sign In</span>
           </div>
