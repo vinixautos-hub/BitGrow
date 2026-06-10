@@ -1166,16 +1166,18 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
     setErr(""); setGLoading(true);
     try {
       const gUser = await signInWithGoogle();
+      if (!gUser) throw new Error("No user returned");
       const nameParts = (gUser.displayName || "").split(" ");
       setGoogleUser(gUser);
       setForm(p => ({ ...p, firstName: nameParts[0] || "", lastName: nameParts.slice(1).join(" ") || "", email: gUser.email || "", username: (gUser.email || "").split("@")[0] }));
-      setStep(2);
+      setGLoading(false);
+      setStep(2); // only runs if no error
     } catch (e) {
+      setGLoading(false);
       setErr("Google Sign-In is currently unavailable. Please continue with email.");
+      return; // explicitly stop here
     }
-    setGLoading(false);
   };
-
   const [regLoading, setRegLoading] = useState(false);
   const submit = async () => {
     setErr("");
