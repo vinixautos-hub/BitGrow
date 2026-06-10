@@ -1323,7 +1323,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
           </div>
 
           {/* Name row */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12 }}>
             <Input label="First Name" value={form.firstName} onChange={f("firstName")} placeholder="John" />
             <Input label="Last Name"  value={form.lastName}  onChange={f("lastName")}  placeholder="Doe"  />
           </div>
