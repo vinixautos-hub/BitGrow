@@ -1170,7 +1170,9 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
       setGoogleUser(gUser);
       setForm(p => ({ ...p, firstName: nameParts[0] || "", lastName: nameParts.slice(1).join(" ") || "", email: gUser.email || "", username: (gUser.email || "").split("@")[0] }));
       setStep(2);
-    } catch (e) { setErr("Google Sign-In failed: " + e.message); }
+    } catch (e) {
+      setErr("Google Sign-In is currently unavailable. Please continue with email.");
+    }
     setGLoading(false);
   };
 
