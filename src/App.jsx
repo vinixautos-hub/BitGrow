@@ -1081,20 +1081,24 @@ async function sendWelcomeEmail(user) {
 
 async function signInWithGoogle() {
   try {
-    const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const { getAuth, GoogleAuthProvider, signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+    const { initializeApp, getApps, getApp } = await import("firebase/app");
+    const { getAuth, GoogleAuthProvider, signInWithPopup } = await import("firebase/auth");
     const firebaseConfig = {
       apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
       authDomain: "bitgrow-e379d.firebaseapp.com",
       projectId: "bitgrow-e379d",
+      storageBucket: "bitgrow-e379d.firebasestorage.app",
+      messagingSenderId: "968123074537",
+      appId: "1:968123074537:web:f4db6242f8964715586d78"
     };
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: "select_account" });
     const result = await signInWithPopup(auth, provider);
     return result.user;
   } catch (e) {
-    console.error("Google auth error:", e);
+    console.error("Google auth error:", e.code, e.message);
     throw new Error("GOOGLE_UNAVAILABLE");
   }
 }
