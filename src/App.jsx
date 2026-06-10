@@ -454,6 +454,8 @@ export default function App() {
         .hov:hover{opacity:.82;transition:opacity .15s}
         .plan-card:hover{border-color:#fbbf2455!important;transform:translateY(-2px);transition:all .2s}
         .drop-item:hover{background:#111218!important}
+        html,body{max-width:100vw;overflow-x:hidden}
+        input,select,textarea,button{max-width:100%}
         @media(max-width:600px){.hide-mobile{display:none!important}.nav-name{display:none!important}}
       `}</style>
       <Nav {...props}/>
