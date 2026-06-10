@@ -1079,24 +1079,24 @@ async function sendWelcomeEmail(user) {
   } catch (e) { console.warn("EmailJS send failed:", e); }
 }
 
-let firebaseAuth = null;
-async function initFirebase() {
-  if (firebaseAuth) return firebaseAuth;
-  try {
-    await getDb(); // ensure app initialized
-    const { getApp } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js");
-    const { getAuth, GoogleAuthProvider, signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js");
-    const app = getApp();
-    firebaseAuth = { GoogleAuthProvider, signInWithPopup, auth: getAuth(app) };
-    return firebaseAuth;
-  } catch (e) { console.warn("Firebase auth init failed:", e); return null; }
-}
 async function signInWithGoogle() {
-  const fb = await initFirebase();
-  if (!fb) throw new Error("Firebase not available");
-  const provider = new fb.GoogleAuthProvider();
-  const result = await fb.signInWithPopup(fb.auth, provider);
-  return result.user;
+  try {
+    const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+    const { getAuth, GoogleAuthProvider, signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+    const firebaseConfig = {
+      apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
+      authDomain: "bitgrow-e379d.firebaseapp.com",
+      projectId: "bitgrow-e379d",
+    };
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    return result.user;
+  } catch (e) {
+    console.error("Google auth error:", e);
+    throw new Error("GOOGLE_UNAVAILABLE");
+  }
 }
 
 // ─── FIX 2,3,4: REGISTER PAGE with phone auto-code, currency↔country sync, cascading dropdowns ──
