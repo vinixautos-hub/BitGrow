@@ -1466,7 +1466,9 @@ function LoginPage({ users, setCurrentUser, navigate }) {
       if (!existing) { setErr("No account found. Please sign up first."); setGLoading(false); return; }
       const { _docId, ...cleanUser } = existing;
       setCurrentUser(cleanUser); navigate("dashboard");
-    } catch (e) { setErr("Google Sign-In failed: " + e.message); }
+    } catch (e) {
+      setErr("Google Sign-In is currently unavailable. Please continue with email.");
+    }
     setGLoading(false);
   };
 
