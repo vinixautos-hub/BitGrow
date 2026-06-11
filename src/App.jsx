@@ -16,7 +16,6 @@ const TESTIMONIALS = [
   { name: "Fatima A.",country: "🇦🇪 UAE",             avatar: "F", text: "Professional platform with a serious team behind it. The blockchain verification step gave me confidence that my funds were being handled properly.", plan: "VIP Plan", joined: "February 2024" },
 ];
 
-
 const BIP_WORDS = ["abandon","ability","able","about","above","absent","absorb","abstract","absurd","abuse","access","accident","account","accuse","achieve","acid","acoustic","acquire","across","act","action","actor","actress","actual","adapt","add","addict","address","adjust","admit","adult","advance","advice","aerobic","afford","afraid","again","agent","agree","ahead","aim","air","airport","aisle","alarm","album","alcohol","alert","alien","alley","allow","almost","alone","alpha","already","also","alter","always","amateur","amazing","among","amount","amused","analyst","anchor","ancient","anger","angle","angry","animal","ankle","announce","annual","another","answer","antenna","antique","anxiety","april","arch","arctic","area","arena","argue","arm","armed","armor","army","around","arrange","arrest","arrive","arrow","art","article","artist","artwork","ask","aspect","assault","asset","assist","assume","asthma","athlete","atom","attack","attend","attitude","attract","auction","audit","august","aunt","author","auto","autumn","average","avocado","aware","awesome","awful","awkward","axis","baby","balance","bamboo","banana","banner","barely","bargain","barrel","base","basic","basket","battle","beach","beauty","because","become","beef","before","begin","behave","behind","believe","below","belt","bench","benefit","best","betray","better","between","beyond","bicycle","bid","bike","bind","biology","bird","birth","bitter","black","blade","blame","blanket","blast","bleak","bless","blind","blood","blossom","blouse","blue","blur","blush","board","boat","body","boil","bomb","bone","book","boost","border","boring","borrow","bounce","brain","brand","brave","bread","breeze","brick","bridge","brief","bright","bring","brisk","broken","bronze","broom","brother","brown","brush","bubble","buddy","budget","buffalo","build","bulb","bulk","bullet","bundle","bunker","burden","burger","burst","bus","business","busy","butter","buyer","buzz"];
 
 function gen12Phrase() {
@@ -33,7 +32,7 @@ const PLANS = [
   { id:"vip",     name:"VIP",     min:10000, max:Infinity, roi:2.00, color:"#f43f5e", badge:"👑", desc:"Institutional-grade strategy",  dailyRate:1.00/90 },
 ];
 
-// ─── COUNTRY DATA: dial codes, currencies, states/cities ─────────────────────
+// ─── COUNTRY DATA ─────────────────────────────────────────────────────────────
 const COUNTRY_DATA = {
   "Afghanistan":      { code:"+93",  currency:"AFN – Afghan Afghani",       states:{ "Kabul":["Kabul City","Paghman","Mir Bacha Kot","Bagrami"],"Kandahar":["Kandahar City","Spin Boldak","Dand","Maiwand"],"Herat":["Herat City","Guzara","Injil","Karukh"],"Balkh":["Mazar-i-Sharif","Nahri Shahi","Dawlatabad","Kishindih"],"Nangarhar":["Jalalabad","Behsud","Rodat","Kama"] } },
   "Albania":          { code:"+355", currency:"ALL – Albanian Lek",          states:{ "Tirana":["Tirana City","Kamëz","Vora","Kashar"],"Durrës":["Durrës City","Shijak","Krujë","Rrashbull"],"Vlorë":["Vlorë City","Orikum","Selenicë","Himarë"],"Shkodër":["Shkodër City","Lezhë","Laç","Mamurras"],"Korçë":["Korçë City","Pogradec","Ersekë","Maliq"] } },
@@ -127,10 +126,8 @@ Object.entries(COUNTRY_DATA).forEach(([country, data]) => {
 const COUNTRIES = Object.keys(COUNTRY_DATA).sort();
 const CURRENCIES = [...new Set(Object.values(COUNTRY_DATA).map(d => d.currency))].sort();
 
-// ─── FIREBASE REALTIME DATABASE (simple REST) ────────────────────────────────
-// No SDK needed — plain fetch to a JSON endpoint. Works across all devices.
+// ─── FIREBASE REALTIME DATABASE ───────────────────────────────────────────────
 const RTDB = "https://bitgrow-e379d-default-rtdb.firebaseio.com";
-
 const _cache = {};
 
 async function fsGetCollection(col) {
@@ -165,7 +162,6 @@ async function fsDeleteDoc(col, docId) {
   } catch(e) { console.error("fsDel error", col, docId, e); }
 }
 
-// localStorage (session + page only — not user data)
 const load = k => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
 const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 function getPlan(amount) { return PLANS.find(p => amount >= p.min && amount <= p.max) || null; }
@@ -194,11 +190,6 @@ function daysUntilWithdraw(inv) {
   return Math.max(0, Math.ceil(WITHDRAW_LOCK_DAYS - (Date.now() - inv.verifiedAt) / (1000 * 60 * 60 * 24)));
 }
 
-// ─── Phone validation ─────────────────────────────────────────────────────────
-// Strips ALL formatting chars (spaces, dashes, parens, dots) then validates:
-// 1. Total digits must be 9-15
-// 2. Number must start with country dial code
-// 3. At least 6 subscriber digits after removing country code
 function validatePhone(phone, country) {
   if (!phone) return false;
   const dialCode = COUNTRY_DATA[country]?.code || "";
@@ -206,7 +197,6 @@ function validatePhone(phone, country) {
   if (digitsOnly.length < 9 || digitsOnly.length > 15) return false;
   if (!dialCode) return true;
   const codeDigits = dialCode.replace("+", "");
-  // Normalize: strip leading + then check starts with country code digits
   const withoutPlus = phone.trim().startsWith("+")
     ? phone.trim().slice(1).replace(/\D/g, "")
     : phone.replace(/[^0-9]/g, "");
@@ -215,7 +205,6 @@ function validatePhone(phone, country) {
   return subscriberDigits.length >= 6;
 }
 
-// ─── ROBUST COPY ─────────────────────────────────────────────────────────────
 function copyToClipboard(text) {
   return new Promise(resolve => {
     if (navigator.clipboard && window.isSecureContext) {
@@ -266,7 +255,6 @@ export default function App() {
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
   const [dbLoading,   setDbLoading]   = useState(true);
 
-  // Session stored in localStorage (browser-local, not synced — just remembers WHO is logged in)
   const [currentUser, setCurrentUserRaw] = useState(()=>{
     try { const s=sessionStorage.getItem("bg_session"); return s?JSON.parse(s):null; } catch{return null;}
   });
@@ -281,122 +269,74 @@ export default function App() {
 
   const setPage = p => { setPageRaw(p); sessionStorage.setItem("bg_page", p); };
 
-  // ── Load ALL data from RTDB on mount, migrate localStorage if needed ──
   useEffect(() => {
     (async () => {
       setDbLoading(true);
       try {
-        // 1. Migrate any existing localStorage users → RTDB (one-time)
         const localUsers = (() => { try { return JSON.parse(localStorage.getItem("bg_users") || "[]"); } catch { return []; } })();
         const localMsgs  = (() => { try { return JSON.parse(localStorage.getItem("bg_chats") || "[]"); } catch { return []; } })();
         const localWs    = (() => { try { return JSON.parse(localStorage.getItem("bg_withdraws") || "[]"); } catch { return []; } })();
 
         if (localUsers.length > 0 && !localStorage.getItem("bg_migrated")) {
-          // Write local users to RTDB
-          for (const u of localUsers) {
-            const { _docId, ...data } = u;
-            await fsSetDoc("bg_users", String(u.id), data);
-          }
-          for (const m of localMsgs) {
-            const { _docId, ...data } = m;
-            await fsSetDoc("bg_chats", String(m.id), data);
-          }
-          for (const w of localWs) {
-            const { _docId, ...data } = w;
-            await fsSetDoc("bg_withdraws", String(w.id), data);
-          }
+          for (const u of localUsers) { const { _docId, ...data } = u; await fsSetDoc("bg_users", String(u.id), data); }
+          for (const m of localMsgs)  { const { _docId, ...data } = m; await fsSetDoc("bg_chats", String(m.id), data); }
+          for (const w of localWs)    { const { _docId, ...data } = w; await fsSetDoc("bg_withdraws", String(w.id), data); }
           localStorage.setItem("bg_migrated", "1");
         }
 
-        // 2. Load fresh from RTDB
         const [u, m, w] = await Promise.all([
           fsGetCollection("bg_users"),
           fsGetCollection("bg_chats"),
           fsGetCollection("bg_withdraws"),
         ]);
-        setUsers(u);
-        setMsgs(m);
-        setWithdraws(w);
+        setUsers(u); setMsgs(m); setWithdraws(w);
 
-        // 3. Refresh current session user from RTDB
         const session = (() => { try { return JSON.parse(sessionStorage.getItem("bg_session") || "null"); } catch { return null; } })();
         if (session) {
           const fresh = u.find(x => x.id === session.id);
           if (fresh) { setCurrentUserRaw(fresh); sessionStorage.setItem("bg_session", JSON.stringify(fresh)); }
         }
-      } catch(e) {
-        console.error("Load error", e);
-      }
+      } catch(e) { console.error("Load error", e); }
       setDbLoading(false);
     })();
   }, []);
 
-  // ── Keep currentUser fresh when users array updates ──
   useEffect(()=>{
     if(currentUser){
       const found = users.find(u=>u.id===currentUser.id);
-      if(found){
-        const { _docId, ...fresh } = found;
-        setCurrentUserRaw(fresh);
-        sessionStorage.setItem("bg_session", JSON.stringify(fresh));
-      }
+      if(found){ const { _docId, ...fresh } = found; setCurrentUserRaw(fresh); sessionStorage.setItem("bg_session", JSON.stringify(fresh)); }
     }
   },[users]);
 
-  // ── Poll Firestore every 20s to sync across devices ──
   useEffect(()=>{
     const id = setInterval(async ()=>{
-      const [u, m, w] = await Promise.all([
-        fsGetCollection("bg_users"),
-        fsGetCollection("bg_chats"),
-        fsGetCollection("bg_withdraws"),
-      ]);
+      const [u, m, w] = await Promise.all([fsGetCollection("bg_users"),fsGetCollection("bg_chats"),fsGetCollection("bg_withdraws")]);
       setUsers(u); setMsgs(m); setWithdraws(w);
     }, 20000);
     return ()=>clearInterval(id);
   },[]);
 
-  // ── updateUsers: write each user to Firestore ──
   const updateUsers = async (newUsers) => {
     setUsers(newUsers);
-    for (const u of newUsers) {
-      const { _docId, ...data } = u;
-      await fsSetDoc("bg_users", String(u.id), data);
-    }
-    // Keep current session fresh
+    for (const u of newUsers) { const { _docId, ...data } = u; await fsSetDoc("bg_users", String(u.id), data); }
     if (currentUser) {
       const found = newUsers.find(u => u.id === currentUser.id);
-      if (found) {
-        const { _docId, ...fresh } = found;
-        setCurrentUserRaw(fresh);
-        sessionStorage.setItem("bg_session", JSON.stringify(fresh));
-      }
+      if (found) { const { _docId, ...fresh } = found; setCurrentUserRaw(fresh); sessionStorage.setItem("bg_session", JSON.stringify(fresh)); }
     }
   };
 
-  // ── updateMsgs: write each msg to Firestore ──
   const updateMsgs = async (newMsgs) => {
     setMsgs(newMsgs);
-    for (const m of newMsgs) {
-      if (!m._docId) {
-        const { _docId, ...data } = m;
-        await fsSetDoc("bg_chats", String(m.id), data);
-      }
-    }
+    for (const m of newMsgs) { if (!m._docId) { const { _docId, ...data } = m; await fsSetDoc("bg_chats", String(m.id), data); } }
   };
 
-  // ── updateWithdraws: write each withdrawal to Firestore ──
   const updateWithdraws = async (newWithdraws) => {
     setWithdraws(newWithdraws);
-    for (const w of newWithdraws) {
-      const { _docId, ...data } = w;
-      await fsSetDoc("bg_withdraws", String(w.id), data);
-    }
+    for (const w of newWithdraws) { const { _docId, ...data } = w; await fsSetDoc("bg_withdraws", String(w.id), data); }
   };
 
   const setCurrentUser = user => {
     if (user) {
-      // Strip Firestore meta before storing in session
       const { _docId, ...cleanUser } = user;
       setCurrentUserRaw(cleanUser);
       sessionStorage.setItem("bg_session", JSON.stringify(cleanUser));
@@ -412,7 +352,6 @@ export default function App() {
   const goBack   = () => setPageHistory(h=>{ const prev=h[h.length-1]||"home"; setPage(prev); return h.slice(0,-1); });
   const logout   = () => { setCurrentUser(null); setPage("home"); setPageHistory([]); setDashTab("overview"); };
 
-  // ── FIX 5: Notification count ──
   useEffect(()=>{
     if(!currentUser)return;
     const unread=msgs.filter(m=>m.userId===currentUser.id&&m.from==="admin"&&!m.read).length;
@@ -423,9 +362,8 @@ export default function App() {
   const props = { users,updateUsers,msgs,updateMsgs,withdraws,updateWithdraws,
                   currentUser,setCurrentUser,page,navigate,goBack,pageHistory,
                   logout,isAdmin,dashTab,setDashTab,notifCount,setNotifCount,
-                  notifPanelOpen, setNotifPanelOpen };
+                  notifPanelOpen,setNotifPanelOpen };
 
-  // Show loading screen while fetching from Firestore
   if (dbLoading) return (
     <div style={{fontFamily:"'Sora','Segoe UI',sans-serif",minHeight:"100vh",background:"#07080f",color:"#e8eaf0",display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:20}}>
       <div style={{width:52,height:52,background:"linear-gradient(135deg,#fbbf24,#f97316)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:26,color:"#07080f"}}>B</div>
@@ -459,13 +397,13 @@ export default function App() {
         @media(max-width:600px){.hide-mobile{display:none!important}.nav-name{display:none!important}}
       `}</style>
       <Nav {...props}/>
-      {page==="home"       && <HomePage      {...props}/>}
-      {page==="login"      && <LoginPage     {...props}/>}
-      {page==="register"   && <RegisterPage  {...props}/>}
-      {page==="recover"    && <RecoverPage   {...props}/>}
-      {page==="dashboard"  && currentUser    && <Dashboard    {...props}/>}
-      {page==="admin"      && isAdmin        && <AdminPanel   {...props}/>}
-      {page==="admin"      && !isAdmin       && <AdminLogin   {...props}/>}
+      {page==="home"      && <HomePage      {...props}/>}
+      {page==="login"     && <LoginPage     {...props}/>}
+      {page==="register"  && <RegisterPage  {...props}/>}
+      {page==="recover"   && <RecoverPage   {...props}/>}
+      {page==="dashboard" && currentUser   && <Dashboard    {...props}/>}
+      {page==="admin"     && isAdmin        && <AdminPanel   {...props}/>}
+      {page==="admin"     && !isAdmin       && <AdminLogin   {...props}/>}
       <Footer navigate={navigate}/>
     </div>
   );
@@ -547,7 +485,7 @@ function LoadingBtn({ onClick, children, loading }) {
   );
 }
 
-// ─── FIX 5: NOTIFICATION PANEL ────────────────────────────────────────────────
+// ─── NOTIFICATION PANEL ──────────────────────────────────────────────────────
 function NotifBell({ count, msgs, currentUser, updateMsgs, setNotifCount, notifPanelOpen, setNotifPanelOpen }) {
   const panelRef = useRef(null);
   const myNotifs = (msgs || []).filter(m => m.userId === currentUser?.id && m.from === "admin");
@@ -572,7 +510,6 @@ function NotifBell({ count, msgs, currentUser, updateMsgs, setNotifCount, notifP
           <span style={{ position: "absolute", top: -5, right: -5, background: "#ef4444", color: "#fff", borderRadius: "50%", width: 17, height: 17, fontSize: 9, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", border: "2px solid #07080f" }}>{count > 9 ? "9+" : count}</span>
         )}
       </button>
-
       {notifPanelOpen && (
         <div className="fadein" style={{ position: "fixed", top: 68, right: 16, width: 340, background: "#0f1117", border: "1px solid #1e2030", borderRadius: 16, boxShadow: "0 24px 70px rgba(0,0,0,0.8)", zIndex: 450, maxHeight: 420, display: "flex", flexDirection: "column" }}>
           <div style={{ padding: "14px 18px 12px", borderBottom: "1px solid #1e2030", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
@@ -605,30 +542,22 @@ function NotifBell({ count, msgs, currentUser, updateMsgs, setNotifCount, notifP
 
 // ─── DELETE ACCOUNT MODAL ────────────────────────────────────────────────────
 function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }) {
-  const [step, setStep] = useState(1); // 1=warning, 2=confirm password
+  const [step, setStep] = useState(1);
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const isGoogle = currentUser.authMethod === "google";
-
   const handleConfirm = async () => {
     setErr("");
-    if (!isGoogle) {
-      if (!password) return setErr("Please enter your password to confirm.");
-      if (password !== currentUser.password) return setErr("Incorrect password. Account not deleted.");
-    }
+    if (!password) return setErr("Please enter your password to confirm.");
+    if (password !== currentUser.password) return setErr("Incorrect password. Account not deleted.");
     setLoading(true);
     try {
       await fsDeleteDoc("bg_users", String(currentUser.id));
       const allChats = await fsGetCollection("bg_chats");
-      for (const m of allChats.filter(m => m.userId === currentUser.id)) {
-        await fsDeleteDoc("bg_chats", String(m.id));
-      }
+      for (const m of allChats.filter(m => m.userId === currentUser.id)) await fsDeleteDoc("bg_chats", String(m.id));
       const allWs = await fsGetCollection("bg_withdraws");
-      for (const w of allWs.filter(w => w.userId === currentUser.id)) {
-        await fsDeleteDoc("bg_withdraws", String(w.id));
-      }
+      for (const w of allWs.filter(w => w.userId === currentUser.id)) await fsDeleteDoc("bg_withdraws", String(w.id));
     } catch(e) { console.error("Delete error", e); }
     sessionStorage.removeItem("bg_session");
     sessionStorage.removeItem("bg_page");
@@ -639,8 +568,6 @@ function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
       <div onClick={e => e.stopPropagation()} className="fadein" style={{ background: "#0f1117", border: "2px solid #ef444444", borderRadius: 20, width: "100%", maxWidth: 460, boxShadow: "0 32px 80px rgba(239,68,68,0.2)" }}>
-
-        {/* Header */}
         <div style={{ padding: "24px 28px 20px", borderBottom: "1px solid #1e2030", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, background: "#ef444418", border: "1px solid #ef444444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>🗑️</div>
@@ -651,11 +578,9 @@ function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }
           </div>
           <button onClick={onClose} style={{ background: "#111218", border: "1px solid #1e2030", color: "#9ca3af", borderRadius: 8, width: 32, height: 32, fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
-
         <div style={{ padding: "24px 28px 28px" }}>
           {step === 1 && (
             <div>
-              {/* Warning box */}
               <div style={{ background: "#ef444410", border: "1px solid #ef444430", borderRadius: 12, padding: "16px 18px", marginBottom: 20 }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#ef4444", marginBottom: 10 }}>⚠️ Before you delete, understand:</div>
                 {[
@@ -670,8 +595,6 @@ function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }
                   </div>
                 ))}
               </div>
-
-              {/* Account summary */}
               <div style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 16px", marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#fbbf24,#f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 16, color: "#07080f" }}>{currentUser.name?.[0]?.toUpperCase()}</div>
@@ -681,44 +604,36 @@ function DeleteAccountModal({ currentUser, users, updateUsers, logout, onClose }
                   </div>
                 </div>
               </div>
-
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={onClose} style={{ flex: 1, background: "#111218", border: "1px solid #1e2030", color: "#e8eaf0", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Cancel</button>
                 <button onClick={() => setStep(2)} style={{ flex: 1, background: "#ef444418", border: "1px solid #ef444455", color: "#ef4444", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>Yes, I understand →</button>
               </div>
             </div>
           )}
-
           {step === 2 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <p style={{ color: "#9ca3af", fontSize: 13, lineHeight: 1.7, margin: 0 }}>
-                To permanently delete your account, {isGoogle ? "click the button below to confirm." : "please enter your password below to confirm."}
+                To permanently delete your account, please enter your password below to confirm.
               </p>
-
               {err && (
                 <div style={{ background: "#ef444414", border: "1px solid #ef444433", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "#ef4444", display: "flex", gap: 8 }}>
                   <span>⚠</span><span>{err}</span>
                 </div>
               )}
-
-              {!isGoogle && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Confirm your password</label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    placeholder="Enter your current password"
-                    autoFocus
-                    style={{ background: "#080910", border: "1px solid #ef444444", borderRadius: 10, padding: "12px 14px", color: "#e8eaf0", fontSize: 15 }}
-                  />
-                </div>
-              )}
-
-              <div style={{ background: "#ef444410", border: "1px solid #ef444430", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "#9ca3af", lineHeight: 1.6 }}>
-                🔴 <strong style={{ color: "#ef4444" }}>This is your final chance.</strong> Clicking delete below will immediately and permanently erase your account. This cannot be reversed.
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Confirm your password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  autoFocus
+                  style={{ background: "#080910", border: "1px solid #ef444444", borderRadius: 10, padding: "12px 14px", color: "#e8eaf0", fontSize: 15 }}
+                />
               </div>
-
+              <div style={{ background: "#ef444410", border: "1px solid #ef444430", borderRadius: 10, padding: "12px 14px", fontSize: 12, color: "#9ca3af", lineHeight: 1.6 }}>
+                🔴 <strong style={{ color: "#ef4444" }}>This is your final chance.</strong> Clicking delete below will immediately and permanently erase your account.
+              </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button onClick={() => { setStep(1); setErr(""); setPassword(""); }} style={{ flex: 1, background: "#111218", border: "1px solid #1e2030", color: "#e8eaf0", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>← Back</button>
                 <button onClick={handleConfirm} disabled={loading} style={{ flex: 1, background: loading ? "#7f1d1d" : "linear-gradient(135deg,#ef4444,#dc2626)", border: "none", color: "#fff", borderRadius: 10, padding: "12px", fontWeight: 700, fontSize: 14, cursor: loading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
@@ -844,18 +759,7 @@ function Nav({ page, navigate, goBack, pageHistory, currentUser, logout, isAdmin
           </> : <>
             <NavBtn label="Dashboard" active={page === "dashboard"} onClick={() => navigate("dashboard")} />
             {isAdmin && <NavBtn label="⚙ Admin" active={page === "admin"} onClick={() => navigate("admin")} />}
-
-            {/* FIX 5: Notification bell opens panel, not dashboard */}
-            <NotifBell
-              count={notifCount}
-              msgs={msgs}
-              currentUser={currentUser}
-              updateMsgs={updateMsgs}
-              setNotifCount={setNotifCount}
-              notifPanelOpen={notifPanelOpen}
-              setNotifPanelOpen={setNotifPanelOpen}
-            />
-
+            <NotifBell count={notifCount} msgs={msgs} currentUser={currentUser} updateMsgs={updateMsgs} setNotifCount={setNotifCount} notifPanelOpen={notifPanelOpen} setNotifPanelOpen={setNotifPanelOpen} />
             <div ref={dropRef} style={{ position: "relative" }}>
               <button onClick={() => setDropOpen(o => !o)} style={{ display: "flex", alignItems: "center", gap: 8, background: dropOpen ? "#1a1d2e" : "#111218", border: `1px solid ${dropOpen ? "#fbbf2466" : "#1e2030"}`, borderRadius: 10, padding: "5px 10px 5px 6px", cursor: "pointer", transition: "all .2s" }}>
                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#fbbf24,#f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 14, color: "#07080f" }}>
@@ -1047,7 +951,7 @@ function HomePage({ navigate, currentUser }) {
         <div style={{ maxWidth: 900, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 48 }}><h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 10 }}>How It Works</h2><p style={{ color: "#6b7280" }}>Four simple steps to start growing your portfolio</p></div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 20 }}>
-            {[["01","Create Account","Register with your referral code and secure your 12-phrase recovery key"],["02","Choose a Plan","Select an investment strategy that matches your financial goals"],["03","Deposit Crypto","Fund your account via BSC (BEP20) wallet transfer"],["04","Track & Withdraw","Monitor real-time returns. Withdrawal available after 3 months"]].map(([n,t,d]) => (
+            {[["01","Create Account","Register and secure your 12-phrase recovery key"],["02","Choose a Plan","Select an investment strategy that matches your financial goals"],["03","Deposit Crypto","Fund your account via Bitcoin (BTC) wallet transfer"],["04","Track & Withdraw","Monitor real-time returns. Withdrawal available after 3 months"]].map(([n,t,d]) => (
               <div key={n} className="card" style={{ padding: 24 }}>
                 <div style={{ fontWeight: 800, fontSize: 40, color: "#1a1d2e", marginBottom: 16 }}>{n}</div>
                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8 }}>{t}</div>
@@ -1061,47 +965,9 @@ function HomePage({ navigate, currentUser }) {
   );
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
-const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";
-const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
-const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";
-
-async function sendWelcomeEmail(user) {
-  try {
-    await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        service_id: EMAILJS_SERVICE_ID, template_id: EMAILJS_TEMPLATE_ID, user_id: EMAILJS_PUBLIC_KEY,
-        template_params: { to_name: user.firstName || user.name, to_email: user.email, referral_code: user.referralCode, from_name: "BitGrow Team", reply_to: "bitgrowofficial1@gmail.com" },
-      }),
-    });
-  } catch (e) { console.warn("EmailJS send failed:", e); }
-}
-
-async function signInWithGoogle() {
-  try {
-    const { initializeApp, getApps, getApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-    const { getAuth, GoogleAuthProvider, signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-    const firebaseConfig = {
-      apiKey: "AIzaSyD5Y6nAMy1qya5qTU64zUURQjMq0GFGM7Q",
-      authDomain: "bitgrow-e379d.firebaseapp.com",
-      projectId: "bitgrow-e379d",
-    };
-    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const result = await signInWithPopup(auth, provider);
-    return result.user;
-  } catch (e) {
-    console.error("Google auth error:", e);
-    throw new Error("GOOGLE_UNAVAILABLE");
-  }
-}
-// ─── FIX 2,3,4: REGISTER PAGE with phone auto-code, currency↔country sync, cascading dropdowns ──
-function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
+// ─── REGISTER PAGE ────────────────────────────────────────────────────────────
+function RegisterPage({ users, setUsers, setMsgs, updateUsers, setCurrentUser, navigate }) {
   const [step, setStep] = useState(1);
-  const [googleUser, setGoogleUser] = useState(null);
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "", phone: "",
     currency: "", country: "", state: "", city: "", address: "",
@@ -1112,42 +978,25 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
   const [phrase, setPhrase] = useState("");
   const [newUser, setNewUser] = useState(null);
   const [phraseCopied, copyPhrase] = useCopy();
-  const [gLoading, setGLoading] = useState(false);
+  const [regLoading, setRegLoading] = useState(false);
   const [phoneManuallyEdited, setPhoneManuallyEdited] = useState(false);
 
-  // Derived dropdown options
   const stateOptions = form.country ? Object.keys(COUNTRY_DATA[form.country]?.states || {}) : [];
   const cityOptions  = (form.country && form.state) ? (COUNTRY_DATA[form.country]?.states?.[form.state] || []) : [];
 
-  // ── FIX 3: When country changes, auto-fill currency + phone code + reset state/city ──
   const handleCountryChange = (country) => {
     const data = COUNTRY_DATA[country] || {};
     const dialCode = data.code || "";
     const currency = data.currency || "";
     setPhoneManuallyEdited(false);
-    setForm(p => ({
-      ...p,
-      country,
-      currency: currency || p.currency,
-      state: "",
-      city: "",
-      phone: dialCode ? dialCode + " " : p.phone,
-    }));
+    setForm(p => ({ ...p, country, currency: currency || p.currency, state: "", city: "", phone: dialCode ? dialCode + " " : p.phone }));
   };
 
-  // ── FIX 3: When currency changes, auto-fill country ──
   const handleCurrencyChange = (currency) => {
     const matchedCountry = CURRENCY_TO_COUNTRY[currency] || "";
     const data = COUNTRY_DATA[matchedCountry] || {};
     const dialCode = data.code || "";
-    setForm(p => ({
-      ...p,
-      currency,
-      country: matchedCountry || p.country,
-      state: "",
-      city: "",
-      phone: (matchedCountry && !phoneManuallyEdited) ? (dialCode ? dialCode + " " : p.phone) : p.phone,
-    }));
+    setForm(p => ({ ...p, currency, country: matchedCountry || p.country, state: "", city: "", phone: (matchedCountry && !phoneManuallyEdited) ? (dialCode ? dialCode + " " : p.phone) : p.phone }));
   };
 
   const handlePhoneChange = (val) => {
@@ -1161,42 +1010,21 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
     if (k === "password") setPwErrs(validatePassword(v));
   };
 
-  const handleGoogleSignIn = async () => {
-    setErr(""); setGLoading(true);
-    try {
-      const gUser = await signInWithGoogle();
-      if (!gUser) throw new Error("No user returned");
-      const nameParts = (gUser.displayName || "").split(" ");
-      setGoogleUser(gUser);
-      setForm(p => ({ ...p, firstName: nameParts[0] || "", lastName: nameParts.slice(1).join(" ") || "", email: gUser.email || "", username: (gUser.email || "").split("@")[0] }));
-      setGLoading(false);
-      setStep(2); // only runs if no error
-    } catch (e) {
-      setGLoading(false);
-      setErr("Google Sign-In is currently unavailable. Please continue with email.");
-      return; // explicitly stop here
-    }
-  };
-  const [regLoading, setRegLoading] = useState(false);
   const submit = async () => {
     setErr("");
     const { firstName, lastName, email, phone, currency, country, state, city, address, username, password, confirm, declared } = form;
-    const isGoogle = !!googleUser;
     if (!firstName || !lastName || !email || !currency || !country || !state || !city || !address || !username) return setErr("Please fill in all required fields.");
     if (!phone || phone.trim().length < 5) return setErr("Please enter a valid phone number.");
     if (!validatePhone(phone, country)) {
       const dialCode = COUNTRY_DATA[country]?.code || "";
       return setErr(`Phone number must start with ${dialCode} and have 7–15 digits.`);
     }
-    if (!isGoogle) {
-      if (!password || !confirm) return setErr("Please set a password.");
-      const errs = validatePassword(password);
-      if (errs.length) return setErr("Password must include: " + errs.join(", ") + ".");
-      if (password !== confirm) return setErr("Passwords do not match.");
-    }
+    if (!password || !confirm) return setErr("Please set a password.");
+    const errs = validatePassword(password);
+    if (errs.length) return setErr("Password must include: " + errs.join(", ") + ".");
+    if (password !== confirm) return setErr("Passwords do not match.");
     if (!declared) return setErr("You must declare that your information is accurate to proceed.");
 
-    // Always check duplicates from fresh Firestore data
     setRegLoading(true);
     const freshUsers = await fsGetCollection("bg_users");
     setRegLoading(false);
@@ -1205,35 +1033,35 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
 
     const p = gen12Phrase(), ref = genReferralCode();
     let referredBy = null;
-    if (form.referral.trim()) { const ru = freshUsers.find(u => u.referralCode === form.referral.trim().toUpperCase()); if (ru) referredBy = ru.id; }
+    if (form.referral.trim()) {
+      const ru = freshUsers.find(u => u.referralCode === form.referral.trim().toUpperCase());
+      if (ru) referredBy = ru.id;
+    }
 
     const user = {
-      id: Date.now(), name: `${firstName.trim()} ${lastName.trim()}`,
+      id: Date.now(),
+      name: `${firstName.trim()} ${lastName.trim()}`,
       firstName: firstName.trim(), lastName: lastName.trim(),
       username: username.trim(), email: email.trim().toLowerCase(),
       phone, currency, country, state, city, address,
-      password: isGoogle ? null : password,
-      googleUid: isGoogle ? googleUser.uid : null,
-      authMethod: isGoogle ? "google" : "email",
+      password,
+      authMethod: "email",
       phrase: p, referralCode: ref, referredBy,
       investments: [], createdAt: Date.now(), manualBonus: 0,
     };
 
-    // Write to Firestore directly
     await fsSetDoc("bg_users", String(user.id), user);
     if (referredBy) {
       const refUser = freshUsers.find(u => u.id === referredBy);
       if (refUser) await fsSetDoc("bg_users", String(referredBy), { ...refUser, manualBonus: (refUser.manualBonus || 0) + 10 });
     }
 
-    const welcomeMsg = { id: Date.now()+1, userId: user.id, userName: user.name, text: `Welcome to BitGrow, ${user.firstName}! 🎉 Your account is now active. To get started, head to the Invest tab, select a plan, and send your deposit to our BSC wallet. Our team is here 24/7 if you need anything. — BitGrow Team`, from: "admin", time: new Date().toLocaleTimeString(), read: false };
+    const welcomeMsg = { id: Date.now()+1, userId: user.id, userName: user.name, text: `Welcome to BitGrow, ${user.firstName}! 🎉 Your account is now active. To get started, head to the Invest tab, select a plan, and send your deposit to our Bitcoin wallet. Our team is here 24/7 if you need anything. — BitGrow Team`, from: "admin", time: new Date().toLocaleTimeString(), read: false };
     await fsSetDoc("bg_chats", String(welcomeMsg.id), welcomeMsg);
 
-    // Update local state
-    setUsers(prev => [...prev, user]);
-    setMsgs(prev => [...prev, welcomeMsg]);
+    if (setUsers) setUsers(prev => [...prev, user]);
+    if (setMsgs) setMsgs(prev => [...prev, welcomeMsg]);
     setPhrase(p); setNewUser(user); setStep(3);
-    sendWelcomeEmail(user);
   };
 
   const strength = form.password.length === 0 ? 0 : (4 - validatePassword(form.password).length);
@@ -1272,7 +1100,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
     </div>
   );
 
-  // ── Step 1: Choose sign-up method ──
+  // ── Step 1: Entry point ──
   if (step === 1) return (
     <div className="fadein" style={{ minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div className="card" style={{ width: "100%", maxWidth: 460, padding: 40 }}>
@@ -1283,18 +1111,9 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
         </div>
         {err && <ErrBox msg={err} />}
         <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: err ? 16 : 0 }}>
-          <button onClick={handleGoogleSignIn} disabled={gLoading} style={{ width: "100%", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "13px 20px", fontSize: 15, fontWeight: 700, color: "#1f2937", cursor: gLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
-            {gLoading ? <div style={{ width: 20, height: 20, border: "2px solid #e5e7eb", borderTopColor: "#4285f4", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/><path fill="none" d="M0 0h48v48H0z"/></svg>}
-            {gLoading ? "Connecting to Google..." : "Continue with Google"}
+          <button onClick={() => { setErr(""); setStep(2); }} style={{ width: "100%", background: "linear-gradient(135deg,#fbbf24,#f97316)", color: "#07080f", border: "none", padding: "14px 20px", borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+            ✉️ Create Account with Email
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ flex: 1, height: 1, background: "#1e2030" }} />
-            <span style={{ color: "#374151", fontSize: 12, fontWeight: 600 }}>OR</span>
-            <div style={{ flex: 1, height: 1, background: "#1e2030" }} />
-          </div>
-          <button onClick={() => { setErr(""); setGoogleUser(null); setStep(2); }} style={{ width: "100%", background: "linear-gradient(135deg,#fbbf24,#f97316)", color: "#07080f", border: "none", padding: "13px 20px", borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-  ✉️ Continue with Email
-</button>
           <div style={{ textAlign: "center", fontSize: 13, color: "#6b7280" }}>
             Already have an account? <span onClick={() => navigate("login")} style={{ color: "#fbbf24", cursor: "pointer", fontWeight: 600 }}>Sign In</span>
           </div>
@@ -1303,7 +1122,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
     </div>
   );
 
-  // ── Step 2: Full questionnaire ──
+  // ── Step 2: Full registration form ──
   return (
     <div className="fadein" style={{ minHeight: "90vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 24px" }}>
       <div className="card" style={{ width: "100%", maxWidth: 560, padding: "32px 16px", overflowX: "hidden" }}>
@@ -1316,7 +1135,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
           {err && <ErrBox msg={err} />}
 
-          {/* ── FIX 3: Currency (syncs country) ── */}
+          {/* Currency */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Account Currency</label>
             <select value={form.currency} onChange={e => handleCurrencyChange(e.target.value)} style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: form.currency ? "#e8eaf0" : "#6b7280", fontSize: 14, appearance: "none" }}>
@@ -1325,7 +1144,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             </select>
           </div>
 
-          {/* Name row */}
+          {/* Name */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12 }}>
             <Input label="First Name" value={form.firstName} onChange={f("firstName")} placeholder="John" />
             <Input label="Last Name"  value={form.lastName}  onChange={f("lastName")}  placeholder="Doe"  />
@@ -1333,7 +1152,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
 
           <Input label="Email Address" value={form.email} onChange={f("email")} placeholder="john@example.com" type="email" />
 
-          {/* ── FIX 3: Country (syncs currency + phone) ── */}
+          {/* Country */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Country</label>
             <select value={form.country} onChange={e => handleCountryChange(e.target.value)} style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: form.country ? "#e8eaf0" : "#6b7280", fontSize: 14, appearance: "none" }}>
@@ -1342,7 +1161,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             </select>
           </div>
 
-          {/* ── FIX 2: Phone with auto country code ── */}
+          {/* Phone */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>
               Phone Number {form.country && COUNTRY_DATA[form.country]?.code && <span style={{ color: "#fbbf24", fontWeight: 700 }}>({COUNTRY_DATA[form.country].code})</span>}
@@ -1359,7 +1178,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             )}
           </div>
 
-          {/* ── State dropdown from country ── */}
+          {/* State */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>State / Province</label>
             {stateOptions.length > 0 ? (
@@ -1373,7 +1192,7 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             )}
           </div>
 
-          {/* ── City dropdown from state ── */}
+          {/* City */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>City / LGA</label>
             {cityOptions.length > 0 ? (
@@ -1393,34 +1212,22 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
             <p style={{ color: "#4b5563", fontSize: 11, textTransform: "uppercase", letterSpacing: .5, fontWeight: 600 }}>Account Credentials</p>
           </div>
 
-          {googleUser && (
-            <div style={{ background: "#10b98115", border: "1px solid #10b98144", borderRadius: 10, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#10b981" }}>✓ Google Account Connected</div>
-                <div style={{ fontSize: 11, color: "#4b5563" }}>{googleUser.email} — no password needed</div>
-              </div>
-            </div>
-          )}
-
           <Input label="Username" value={form.username} onChange={f("username")} placeholder="johndoe" />
           <Input label="Referral Code (optional)" value={form.referral} onChange={f("referral")} placeholder="e.g. BGXYZ123" />
 
-          {!googleUser && (
-            <>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                <Input label="Password" value={form.password} onChange={f("password")} placeholder="Min 8 chars, uppercase, number, symbol" type="password" />
-                {form.password.length > 0 && (
-                  <div>
-                    <div style={{ display: "flex", gap: 4, marginTop: 6, marginBottom: 4 }}>{[0,1,2,3].map(i => <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < strength ? strengthColor : "#1e2030" }} />)}</div>
-                    <div style={{ fontSize: 11, color: strengthColor, fontWeight: 600 }}>{strengthLabel}</div>
-                  </div>
-                )}
+          {/* Password */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <Input label="Password" value={form.password} onChange={f("password")} placeholder="Min 8 chars, uppercase, number, symbol" type="password" />
+            {form.password.length > 0 && (
+              <div>
+                <div style={{ display: "flex", gap: 4, marginTop: 6, marginBottom: 4 }}>{[0,1,2,3].map(i => <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < strength ? strengthColor : "#1e2030" }} />)}</div>
+                <div style={{ fontSize: 11, color: strengthColor, fontWeight: 600 }}>{strengthLabel}</div>
               </div>
-              <Input label="Confirm Password" value={form.confirm} onChange={f("confirm")} placeholder="Re-enter password" type="password" />
-            </>
-          )}
+            )}
+          </div>
+          <Input label="Confirm Password" value={form.confirm} onChange={f("confirm")} placeholder="Re-enter password" type="password" />
 
+          {/* Declaration */}
           <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer", background: "#080910", border: `1px solid ${form.declared ? "#fbbf2466" : "#1e2030"}`, borderRadius: 10, padding: "14px 16px" }}>
             <div style={{ position: "relative", flexShrink: 0, marginTop: 1 }}>
               <input type="checkbox" checked={form.declared} onChange={f("declared")} style={{ opacity: 0, position: "absolute", width: 18, height: 18, cursor: "pointer" }} />
@@ -1439,16 +1246,15 @@ function RegisterPage({ users, updateUsers, setCurrentUser, navigate }) {
   );
 }
 
+// ─── LOGIN PAGE ───────────────────────────────────────────────────────────────
 function LoginPage({ users, setCurrentUser, navigate }) {
   const [form, setForm] = useState({ email: "", password: "" });
   const [err, setErr] = useState("");
-  const [gLoading, setGLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
   const f = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
-  const [loginLoading, setLoginLoading] = useState(false);
   const submit = async () => {
     setErr(""); setLoginLoading(true);
-    // Always fetch fresh from Firestore so credentials are cross-device accurate
     const freshUsers = await fsGetCollection("bg_users");
     const user = freshUsers.find(u => u.email.toLowerCase() === form.email.toLowerCase() && u.password === form.password);
     setLoginLoading(false);
@@ -1457,34 +1263,9 @@ function LoginPage({ users, setCurrentUser, navigate }) {
     setCurrentUser(cleanUser); navigate("dashboard");
   };
 
-  const handleGoogleLogin = async () => {
-    setErr(""); setGLoading(true);
-    try {
-      const gUser = await signInWithGoogle();
-      // Fetch fresh from Firestore — cross-device
-      const freshUsers = await fsGetCollection("bg_users");
-      const existing = freshUsers.find(u => u.googleUid === gUser.uid || u.email.toLowerCase() === gUser.email.toLowerCase());
-      if (!existing) { setErr("No account found. Please sign up first."); setGLoading(false); return; }
-      const { _docId, ...cleanUser } = existing;
-      setCurrentUser(cleanUser); navigate("dashboard");
-    } catch (e) {
-      setErr("Google Sign-In is currently unavailable. Please continue with email.");
-    }
-    setGLoading(false);
-  };
-
   return (
     <AuthLayout title="Welcome Back" subtitle="Sign in to your BitGrow account" navigate={navigate}>
       {err && <ErrBox msg={err} />}
-      <button onClick={handleGoogleLogin} disabled={gLoading} style={{ width: "100%", background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, padding: "12px 20px", fontSize: 14, fontWeight: 700, color: "#1f2937", cursor: gLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-        {gLoading ? <div style={{ width: 18, height: 18, border: "2px solid #e5e7eb", borderTopColor: "#4285f4", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} /> : <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>}
-        {gLoading ? "Connecting..." : "Continue with Google"}
-      </button>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <div style={{ flex: 1, height: 1, background: "#1e2030" }} />
-        <span style={{ color: "#374151", fontSize: 12, fontWeight: 600 }}>OR</span>
-        <div style={{ flex: 1, height: 1, background: "#1e2030" }} />
-      </div>
       <Input label="Email Address" value={form.email} onChange={f("email")} placeholder="you@example.com" type="email" />
       <Input label="Password" value={form.password} onChange={f("password")} placeholder="••••••••" type="password" />
       <LoadingBtn onClick={submit} loading={loginLoading}>Sign In</LoadingBtn>
@@ -1494,6 +1275,7 @@ function LoginPage({ users, setCurrentUser, navigate }) {
   );
 }
 
+// ─── RECOVER PAGE ─────────────────────────────────────────────────────────────
 function RecoverPage({ users, setCurrentUser, navigate }) {
   const [phrase, setPhrase] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -1502,7 +1284,6 @@ function RecoverPage({ users, setCurrentUser, navigate }) {
   const [done, setDone] = useState(false);
   const submit = async () => {
     setErr("");
-    // Fetch fresh from Firestore
     const freshUsers = await fsGetCollection("bg_users");
     const user = freshUsers.find(u => u.phrase === phrase.trim().toLowerCase());
     if (!user) return setErr("Recovery phrase not recognised.");
@@ -1571,7 +1352,7 @@ function Dashboard({ currentUser, users, updateUsers, msgs, updateMsgs, withdraw
   const sendChat = async msg => {
     const newMsg = { id: Date.now(), userId: user.id, userName: user.name, text: msg, from: "user", time: new Date().toLocaleTimeString(), read: false };
     await fsSetDoc("bg_chats", String(newMsg.id), newMsg);
-    setMsgs(prev => [...prev, newMsg]);
+    updateMsgs(prev => [...(Array.isArray(prev) ? prev : []), newMsg]);
   };
 
   return (
@@ -1615,7 +1396,7 @@ function OverviewTab({ user, totalBalance, totalInvested, totalProfit, activeInv
               <h3 style={{ fontWeight: 800, fontSize: 18, marginBottom: 8, color: "#fbbf24" }}>Welcome to BitGrow, {user.firstName || user.name?.split(" ")[0]}!</h3>
               <p style={{ color: "#9ca3af", fontSize: 13, lineHeight: 1.7, marginBottom: 20 }}>Your account is set up and ready. Follow these 3 steps to activate your investment.</p>
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20 }}>
-                {[["1","Choose a Plan","Select the tier that fits your goals"],["2","Send Deposit","Transfer to our BSC wallet & paste TxID"],["3","Get Verified","Admin confirms & your balance activates"]].map(([n,t,d])=>(
+                {[["1","Choose a Plan","Select the tier that fits your goals"],["2","Send Deposit","Transfer to our Bitcoin wallet & paste TxID"],["3","Get Verified","Admin confirms & your balance activates"]].map(([n,t,d])=>(
                   <div key={n} style={{ flex: 1, minWidth: 140, background: "#07080f", borderRadius: 10, padding: "12px 14px", border: "1px solid #1e2030" }}>
                     <div style={{ width: 22, height: 22, borderRadius: 6, background: "linear-gradient(135deg,#fbbf24,#f97316)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 11, color: "#07080f", marginBottom: 8 }}>{n}</div>
                     <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{t}</div>
@@ -1682,8 +1463,6 @@ function OverviewTab({ user, totalBalance, totalInvested, totalProfit, activeInv
   );
 }
 
-
-
 function InvestTab({ user, users, updateUsers }) {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [amount, setAmount] = useState("");
@@ -1699,7 +1478,7 @@ function InvestTab({ user, users, updateUsers }) {
     if (!amount || isNaN(amount) || +amount < MIN_INVEST) return setErr(`Minimum investment is ${usd(MIN_INVEST)}.`);
     const p = getPlan(+amount);
     if (!p || p.id !== selectedPlan.id) return setErr(`Amount is outside the ${selectedPlan.name} range.`);
-    if (!txid.trim()) return setErr("Please enter your BSC Transaction ID.");
+    if (!txid.trim()) return setErr("Please enter your Bitcoin Transaction ID.");
     setLoading(true);
     const inv = { id: Date.now(), amount: +amount, txid: txid.trim(), plan: p.id, startedAt: Date.now(), status: "pending_verification", verifiedAt: null };
     await updateUsers(users.map(u => u.id === user.id ? { ...u, investments: [...(u.investments || []), inv] } : u));
@@ -1732,15 +1511,11 @@ function InvestTab({ user, users, updateUsers }) {
       <div style={{ marginBottom: 24 }}>
         <StepHeader n="2" title="Send Deposit to Wallet" />
         <div className="card" style={{ padding: 24, border: "1px solid #fbbf2422" }}>
-          <div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fbbf24", fontWeight: 700, marginBottom: 10, fontSize: 13 }}><BtcIcon /> Only send Bitcoin (BTC) assets to this address. Other assets will be lost forever</div>
-              <div style={{ background: "#080910", borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11, color: "#e8eaf0", wordBreak: "break-all", lineHeight: 1.9, marginBottom: 12, border: "1px solid #1e2030" }}>{BITCOIN_ADDRESS}</div>
-              <button onClick={() => copyAddr(BITCOIN_ADDRESS)} style={{ width: "100%", background: addrCopied ? "#10b98118" : "#fbbf2418", color: addrCopied ? "#10b981" : "#fbbf24", border: `1px solid ${addrCopied ? "#10b98155" : "#fbbf2455"}`, padding: "9px", borderRadius: 8, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                <CopyIcon /> {addrCopied ? "✓ Copied!" : "Copy Address"}
-              </button>
-            </div>
-          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fbbf24", fontWeight: 700, marginBottom: 10, fontSize: 13 }}><BtcIcon /> Only send Bitcoin (BTC) to this address. Other assets will be lost forever.</div>
+          <div style={{ background: "#080910", borderRadius: 8, padding: 12, fontFamily: "monospace", fontSize: 11, color: "#e8eaf0", wordBreak: "break-all", lineHeight: 1.9, marginBottom: 12, border: "1px solid #1e2030" }}>{BITCOIN_ADDRESS}</div>
+          <button onClick={() => copyAddr(BITCOIN_ADDRESS)} style={{ width: "100%", background: addrCopied ? "#10b98118" : "#fbbf2418", color: addrCopied ? "#10b981" : "#fbbf24", border: `1px solid ${addrCopied ? "#10b98155" : "#fbbf2455"}`, padding: "9px", borderRadius: 8, fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+            <CopyIcon /> {addrCopied ? "✓ Copied!" : "Copy Address"}
+          </button>
         </div>
       </div>
       <div>
@@ -1763,7 +1538,7 @@ function InvestTab({ user, users, updateUsers }) {
 }
 
 function WithdrawTab({ user, totalBalance, withdraws, updateWithdraws, myWithdraws, activeInv }) {
-  const [wForm, setWForm] = useState({ amount: "", wallet: "", network: "BSC (BEP20)" });
+  const [wForm, setWForm] = useState({ amount: "", wallet: "", network: "Bitcoin (BTC)" });
   const [wErr, setWErr] = useState("");
   const [wDone, setWDone] = useState(false);
   const [wLoading, setWLoading] = useState(false);
@@ -1815,7 +1590,7 @@ function WithdrawTab({ user, totalBalance, withdraws, updateWithdraws, myWithdra
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 600, textTransform: "uppercase", letterSpacing: .4 }}>Network</label>
           <select value={wForm.network} onChange={fw("network")} style={{ background: "#080910", border: "1px solid #1e2030", borderRadius: 10, padding: "12px 14px", color: "#e8eaf0", fontSize: 14 }}>
-            <option>BSC (BEP20)</option><option>Ethereum (ERC20)</option><option>TRON (TRC20)</option><option>Bitcoin (BTC)</option>
+            <option>Bitcoin (BTC)</option><option>BSC (BEP20)</option><option>Ethereum (ERC20)</option><option>TRON (TRC20)</option>
           </select>
         </div>
         <Input label="Destination Wallet Address" value={wForm.wallet} onChange={fw("wallet")} placeholder="Paste your wallet address" />
@@ -1927,7 +1702,7 @@ function AdminLogin({ navigate }) {
     <div className="fadein" style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
       <div className="card" style={{ width: "100%", maxWidth: 400, padding: 40, textAlign: "center" }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-        <h2 style={{ fontWeight: 800, fontSize: 22, marginBottom: 10 }}>Restricted Access</h2>
+ <h2 style={{ fontWeight: 800, fontSize: 22, marginBottom: 10 }}>Restricted Access</h2>
         <button onClick={() => navigate("login")} style={{ width: "100%", background: "linear-gradient(135deg,#fbbf24,#f97316)", color: "#07080f", border: "none", padding: "14px", borderRadius: 10, fontWeight: 700, fontSize: 16 }}>Go to Sign In</button>
       </div>
     </div>
@@ -1986,7 +1761,7 @@ function AdminPanel({ users, updateUsers, msgs, updateMsgs, withdraws, updateWit
                         <div style={{ background: "#080910", borderRadius: 8, padding: "10px 12px" }}>
                           <div style={{ color: "#4b5563", fontSize: 10, marginBottom: 2 }}>TRANSACTION ID</div>
                           <div style={{ fontFamily: "monospace", fontSize: 11, color: "#fbbf24", wordBreak: "break-all" }}>{inv.txid}</div>
-                          <a href={`https://bscscan.com/tx/${inv.txid}`} target="_blank" rel="noreferrer" style={{ color: "#6366f1", fontSize: 11, marginTop: 4, display: "inline-block" }}>🔍 View on BSCScan →</a>
+                          <a href={`https://blockchair.com/bitcoin/transaction/${inv.txid}`} target="_blank" rel="noreferrer" style={{ color: "#6366f1", fontSize: 11, marginTop: 4, display: "inline-block" }}>🔍 View on Blockchair →</a>
                         </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8, minWidth: 130 }}>
@@ -2128,7 +1903,7 @@ function AdminPanel({ users, updateUsers, msgs, updateMsgs, withdraws, updateWit
   );
 }
 
-// ─── SHARED ───────────────────────────────────────────────────────────────────
+// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 function StatusBadge({ status }) {
   const m = { pending:{ bg:"#f59e0b18",c:"#f59e0b",l:"⏳ Pending" }, pending_verification:{ bg:"#f59e0b18",c:"#f59e0b",l:"🔍 Awaiting Verification" }, verified:{ bg:"#10b98118",c:"#10b981",l:"✅ Verified" }, approved:{ bg:"#6366f118",c:"#6366f1",l:"✓ Approved" }, paid:{ bg:"#10b98118",c:"#10b981",l:"💸 Paid" }, rejected:{ bg:"#ef444418",c:"#ef4444",l:"✕ Rejected" }, active:{ bg:"#10b98118",c:"#10b981",l:"● Active" } };
   const s = m[status] || m.pending;
@@ -2166,7 +1941,7 @@ const INFO_CONTENT = {
   "Live Chat": { title: "Live Support Chat", body: `BitGrow's Live Chat support is available 24/7 directly from your investor Dashboard.\n\nOur support specialists assist with:\n• Investment plan selection and strategy guidance\n• Deposit submission and transaction verification status\n• Withdrawal requests and processing timelines\n• Account recovery and security concerns\n\nClick the chat bubble icon (💬) at the bottom-right corner of your Dashboard to open the live chat widget.` },
   "FAQ": { title: "Frequently Asked Questions", body: `Q: How do I start investing on BitGrow?\nA: Create an account, select an investment plan, send your deposit to the Bitcoin (BTC) wallet address, then submit your transaction ID for admin verification.\n\nQ: How long does verification take?\nA: Admin verification is typically completed within 1–12 hours of submission.\n\nQ: When can I withdraw my funds?\nA: Withdrawals are available after the 90-day maturity period. The minimum withdrawal is $500.\n\nQ: What network should I use to deposit?\nA: All deposits must be sent via the Bitcoin (BTC) network only.\n\nQ: Is my account secure?\nA: Yes. Your account is protected by your password and a unique 12-word recovery phrase.` },
   "Contact Us": { title: "Contact BitGrow", body: `We are committed to providing responsive, professional support.\n\n📱 Telegram\n👉 t.me/BitGrowOfficial\n\n📧 Email\n👉 bitgrowofficial1@gmail.com\n\n💬 Live Chat\nAvailable directly in your Dashboard at any time.` },
-  "Security": { title: "Platform Security", body: `BitGrow is built on a foundation of security-first principles.\n\nAccount Security\nYour account is protected by a password and a unique 12-word BIP39-standard recovery phrase generated at registration. This phrase is never stored on our servers.\n\nPassword Requirements\nAll passwords must include at least 8 characters, one uppercase letter, one number, and one special character.\n\nBlockchain Transparency\nAll investment transactions are recorded on the Blockchain.com and can be independently verified on Blockchair using your transaction ID.` },
+  "Security": { title: "Platform Security", body: `BitGrow is built on a foundation of security-first principles.\n\nAccount Security\nYour account is protected by a password and a unique 12-word BIP39-standard recovery phrase generated at registration. This phrase is never stored on our servers.\n\nPassword Requirements\nAll passwords must include at least 8 characters, one uppercase letter, one number, and one special character.\n\nBlockchain Transparency\nAll investment transactions are recorded on the blockchain and can be independently verified on Blockchair using your transaction ID.` },
   "Terms of Service": { title: "Terms of Service", body: `Last updated: January 2026\n\n1. Acceptance of Terms\nBy accessing or using the BitGrow platform, you agree to be bound by these Terms of Service.\n\n2. Eligibility\nYou must be at least 18 years of age and legally permitted to engage in investment activities in your jurisdiction.\n\n3. Investment Risk\nAll investments carry inherent risk. Projected returns are estimates and not guarantees.\n\n4. User Responsibilities\nYou are responsible for maintaining the confidentiality of your account credentials and recovery phrase.` },
   "Privacy Policy": { title: "Privacy Policy", body: `Last updated: January 2026\n\n1. Information We Collect\nWe collect information you provide when you register, including your name, email address, and investment activity.\n\n2. How We Use Your Information\nYour information is used to operate your account, process investment transactions, and respond to support enquiries.\n\n3. Data Sharing\nWe do not sell, rent, or share your personal information with third parties for marketing purposes.\n\n4. Your Rights\nYou have the right to access, correct, or request deletion of your personal data at any time.` },
   "Risk Disclosure": { title: "Risk Disclosure Statement", body: `Important Notice: Please read this Risk Disclosure Statement carefully before investing.\n\n1. General Investment Risk\nAll forms of investment carry the risk of partial or total loss of capital.\n\n2. Cryptocurrency Volatility\nCryptocurrency markets are highly volatile and can fluctuate significantly.\n\n3. Projected Returns\nThe ROI figures displayed are projections, not guarantees. Actual returns may differ.\n\n4. Liquidity Risk\nInvestments are subject to a 90-day maturity lock. Do not invest funds you may need access to within this timeframe.` },
